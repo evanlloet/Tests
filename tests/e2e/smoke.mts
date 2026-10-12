@@ -45,17 +45,25 @@ await page.goto(`${BASE}/inscription`);
 await page.fill("#displayName", "Léa");
 await page.fill("#email", email);
 await page.fill("#password", "motdepasse123");
-await Promise.all([page.waitForURL(/\/profil/), page.click("button[type=submit]")]);
+await Promise.all([page.waitForURL(/\/bienvenue/), page.click("button[type=submit]")]);
 log("inscription OK →", page.url());
 
-// 2. Domicile (Rennes)
-await page.fill("#homeAddress", "Rennes");
-await page.fill("#homeLat", "48,1173");
-await page.fill("#homeLng", "-1,6778");
-await page.locator("#deplacements button[type=submit]").first().click();
-await page.getByText("Préférences de déplacement enregistrées").waitFor();
-log("domicile enregistré");
-await shot("01-profil");
+// 2. Accueil pas à pas : domicile, secteur, semaine type, rythme, fréquences, récompenses, visite guidée
+await shot("01a-accueil");
+await page.getByRole("button", { name: /C'est parti/ }).click();
+await page.getByRole("radio", { name: "Rennes" }).click();
+for (const heading of [/secteur/, /semaine type/, /rythme/, /visites par an/, /peu de jeu/]) {
+  await page.getByRole("button", { name: /Continuer/ }).click();
+  await page.getByRole("heading", { name: heading }).waitFor();
+}
+await page.getByRole("button", { name: /Continuer/ }).click();
+await page.getByText("Visite guidée").waitFor();
+await shot("01b-visite-guidee");
+await page.getByRole("button", { name: "Passer" }).click();
+await page.getByRole("heading", { name: /Tout est prêt/ }).waitFor();
+await Promise.all([page.waitForURL(`${BASE}/`), page.getByRole("button", { name: /Découvrir l'accueil/ }).click()]);
+log("accueil terminé, domicile : Rennes");
+await shot("01-premier-ecran");
 
 // 3. Import pharmacies
 await page.goto(`${BASE}/pharmacies/import`);
@@ -118,13 +126,23 @@ await shot("08-planning-semaine");
 page.once("dialog", (d) => d.accept());
 const block = page.locator("a[draggable=true]").first();
 const columns = page.locator("[aria-label^='Colonne du']");
-await block.dragTo(columns.nth(1), { targetPosition: { x: 40, y: 500 } });
+await block.dragTo(columns.nth(1), { targetPosition: { x: 40, y: 150 } });
 await page.getByText("Rendez-vous déplacé").waitFor({ timeout: 15000 });
 log("glisser-déposer : rendez-vous déplacé");
 
 // 8. Tournée du jour avec visites (premier jour ouvré à venir ayant ≥ 3 visites)
 await page.goto(`${BASE}/`);
 await shot("09-aujourdhui");
+// « Rendez-vous terminé » → compte rendu → célébration et propositions de prochaine visite
+const finish = page.getByRole("button", { name: "Rendez-vous terminé" }).first();
+if (await finish.count()) {
+  await finish.click();
+  await page.locator("textarea[name=summary]").fill("Commande passée, présentation de la nouvelle gamme.");
+  await page.getByRole("button", { name: /Valider la visite/ }).click();
+  await page.getByText("Visite clôturée, bravo !").waitFor({ timeout: 30000 });
+  log("visite clôturée :", (await page.getByText(/\+\d+ points/).first().innerText()).trim());
+  await shot("09b-celebration");
+}
 let tourDate = null;
 for (let i = 0; i < 10 && !tourDate; i++) {
   const d = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
@@ -167,6 +185,15 @@ await shot("11-carte");
 await page.goto(`${BASE}/pilotage`);
 await shot("12-pilotage");
 
+// 10 ter. Récompenses
+await page.goto(`${BASE}/recompenses`);
+await page.getByText("Défis de la semaine").waitFor();
+log("récompenses :", (await page.locator("text=points").first().innerText()).replace(/\n/g, " "));
+await shot("12b-recompenses");
+await page.goto(`${BASE}/planning?vue=mois`);
+await page.getByText("Humeur du mois").waitFor();
+await shot("08b-planning-mois");
+
 // 10 bis. Export des données et persistance après déconnexion / reconnexion
 const exportRes = await page.request.get(`${BASE}/api/export`);
 const exported = await exportRes.json();
@@ -192,6 +219,8 @@ const mobilePages = [
   ["/pharmacies", "m03-pharmacies"],
   ["/rapprochements", "m04-rapprochements"],
   ["/profil", "m05-profil"],
+  ["/planning?vue=mois", "m06-planning-mois"],
+  ["/recompenses", "m07-recompenses"],
 ] as const;
 for (const [route, name] of mobilePages) {
   await m.goto(`${BASE}${route}`);

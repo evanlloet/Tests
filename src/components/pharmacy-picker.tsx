@@ -46,7 +46,7 @@ export function PharmacyPicker({
     <div className="space-y-2">
       <input type="hidden" name={name} value={selected?.id ?? ""} />
       {selected ? (
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-primary/40 bg-primary-soft px-3 py-2 text-sm">
+        <div className="flex items-center justify-between gap-2 rounded-2xl border border-primary/40 bg-primary-soft px-3 py-2 text-sm">
           <span className="min-w-0 truncate">
             <strong>{selected.name}</strong> <span className="text-muted">{[selected.postalCode, selected.city].filter(Boolean).join(" ")}</span>
           </span>
@@ -66,12 +66,12 @@ export function PharmacyPicker({
               placeholder="Rechercher une pharmacie (nom, commune)…"
               aria-label="Rechercher une pharmacie"
               required={required && !selected}
-              className="h-11 w-full rounded-xl border border-border bg-surface pr-3 pl-10 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+              className="h-11 w-full rounded-full border border-border bg-surface pr-3 pl-10 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
               autoComplete="off"
             />
           </div>
           {query ? (
-            <ul role="listbox" aria-label="Résultats" className="max-h-64 overflow-auto rounded-xl border border-border bg-surface">
+            <ul role="listbox" aria-label="Résultats" className="max-h-64 overflow-auto rounded-2xl border border-border bg-surface">
               {results.length === 0 ? <li className="px-3 py-2 text-sm text-muted">Aucun résultat</li> : null}
               {results.map((o) => (
                 <li key={o.id} role="option" aria-selected={false}>

@@ -78,11 +78,11 @@ export default async function RoutesPage({ searchParams }: { searchParams: Promi
             ))}
           </Select>
         </label>
-        <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-sm">
+        <label className="flex h-10 items-center gap-2 rounded-full border border-border bg-surface px-3 text-sm">
           <input type="checkbox" name="confirmes" value="deplacables" defaultChecked={allowConfirmed} className="accent-[var(--primary)]" />
           Autoriser le déplacement des rendez-vous confirmés
         </label>
-        <button type="submit" className="h-10 rounded-xl bg-text px-4 text-sm font-medium text-bg">
+        <button type="submit" className="h-10 rounded-full bg-ink px-5 text-sm font-semibold text-ink-fg">
           Simuler
         </button>
       </form>
@@ -231,15 +231,15 @@ function ScenarioCard({ title, schedule, sim, highlight }: { title: string; sche
       <CardHeader title={title} />
       <CardBody className="space-y-3">
         <dl className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-surface-2 p-2">
+          <div className="rounded-2xl bg-surface-2 p-2">
             <dt className="text-[11px] text-muted">Distance</dt>
             <dd className="font-semibold tabular-nums">{formatKm(schedule.totalKm)}</dd>
           </div>
-          <div className="rounded-xl bg-surface-2 p-2">
+          <div className="rounded-2xl bg-surface-2 p-2">
             <dt className="text-[11px] text-muted">Conduite</dt>
             <dd className="font-semibold tabular-nums">{formatDuration(schedule.totalDriveMin)}</dd>
           </div>
-          <div className="rounded-xl bg-surface-2 p-2">
+          <div className="rounded-2xl bg-surface-2 p-2">
             <dt className="text-[11px] text-muted">Retour</dt>
             <dd className="font-semibold tabular-nums">{formatHHmm(schedule.returnLeg.arrival)}</dd>
           </div>

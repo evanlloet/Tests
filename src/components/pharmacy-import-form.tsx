@@ -43,7 +43,7 @@ export function PharmacyImportForm() {
               <Stat label="Ignorées" value={result.skipped} />
             </div>
             {result.issues.length ? (
-              <details className="rounded-xl border border-border p-3 text-sm" open={result.issues.length <= 10}>
+              <details className="rounded-2xl border border-border p-3 text-sm" open={result.issues.length <= 10}>
                 <summary className="cursor-pointer font-medium">{result.issues.length} remarque(s) sur le fichier</summary>
                 <ul className="mt-2 max-h-72 space-y-1 overflow-auto text-muted">
                   {result.issues.map((i, idx) => (

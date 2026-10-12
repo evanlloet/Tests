@@ -93,7 +93,7 @@ export function MatchCard({ data, options }: { data: MatchCardData; options: Pic
           <label
             key={c.pharmacyId}
             className={cn(
-              "flex cursor-pointer gap-3 rounded-xl border px-3 py-2.5 text-sm",
+              "flex cursor-pointer gap-3 rounded-2xl border-2 px-3 py-2.5 text-sm",
               choice === c.pharmacyId ? "border-primary bg-primary-soft/50" : "border-border hover:bg-surface-2",
             )}
           >
@@ -109,7 +109,7 @@ export function MatchCard({ data, options }: { data: MatchCardData; options: Pic
             </span>
           </label>
         ))}
-        <label className={cn("flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm", choice === "other" ? "border-primary" : "border-border")}>
+        <label className={cn("flex cursor-pointer items-center gap-3 rounded-2xl border-2 px-3 py-2.5 text-sm", choice === "other" ? "border-primary" : "border-border")}>
           <input type="radio" name={`choice-${data.id}`} checked={choice === "other"} onChange={() => setChoice("other")} className="accent-[var(--primary)]" />
           Choisir une autre pharmacie
         </label>

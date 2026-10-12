@@ -7,6 +7,7 @@ import { appointments, auditLogs, pharmacies, travelPreferences, users } from "@
 import { AppointmentError, completeVisit, createAppointment, updateAppointment } from "@/server/services/appointments";
 import { importPharmacyCsv } from "@/server/services/pharmacy-import";
 import { getPharmacyOverview } from "@/server/services/pharmacy-overview";
+import { getRewards } from "@/server/services/rewards";
 import { applyRoutePlan, RoutePlanError, simulateDayPlan } from "@/server/services/route-plan";
 import { suggestNextVisit } from "@/server/services/suggestions";
 import { bytes, createTestUser, resetDatabase } from "../support/db";
@@ -62,6 +63,26 @@ describe("services métier (base réelle)", () => {
     expect(caen().status.lastVisit?.state).toBe("done");
     const bayeux = overview.find((o) => o.pharmacy.id === ph.Bayeux)!;
     expect(bayeux.status.dueState).toBe("never_visited");
+  });
+
+  it("calcule points et badges à partir des faits enregistrés (sans compteur stocké)", async () => {
+    const { user, ph } = await setup();
+    const empty = await getRewards(db, user);
+    expect(empty.points).toBe(0);
+    expect(empty.level.name).toBe("Graine");
+    const past = new Date(Date.now() - 2 * 86_400_000);
+    const appt = await createAppointment(db, user.id, {
+      pharmacyId: ph.Honfleur!, kind: "visit", title: "Visite", startsAt: past, endsAt: new Date(past.getTime() + 45 * 60_000), status: "confirmed", notes: null,
+    });
+    // Un rendez-vous identifié mais non clôturé ne rapporte rien
+    expect((await getRewards(db, user)).points).toBe(0);
+    await completeVisit(db, user.id, appt.id, { summary: "Commande passée", nextActions: null });
+    const r = await getRewards(db, user);
+    const line = (label: string) => r.breakdown.find((b) => b.label === label)?.points;
+    expect(line("Visites réalisées")).toBe(10);
+    expect(line("Comptes rendus")).toBe(5);
+    expect(r.points).toBeGreaterThanOrEqual(15);
+    expect(r.badges.find((b) => b.key === "first-visit")?.unlocked).toBe(true);
   });
 
   it("propose des créneaux pour la prochaine visite", async () => {

@@ -50,6 +50,9 @@ export type SessionUser = Pick<
   | "frequencyC"
   | "frequencyD"
   | "autoMatchThreshold"
+  | "onboardingStep"
+  | "onboardingCompletedAt"
+  | "gamificationEnabled"
 >;
 
 /** Utilisateur courant (une seule requête SQL par rendu grâce à `cache`). */

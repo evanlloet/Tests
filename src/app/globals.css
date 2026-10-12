@@ -1,87 +1,142 @@
 @import "tailwindcss";
 
 /*
- * Thème Léa : tons chauds et apaisants. Les couleurs sont des jetons CSS
- * redéfinis en mode sombre (préférence système ou choix dans le profil).
+ * Thème Léa : fond lilas clair, tuiles pastel, encre presque noire pour les
+ * actions principales, bleu roi pour les liens et sélections. Les couleurs sont
+ * des jetons CSS, redéfinis en mode sombre (préférence système ou choix du profil).
  */
 :root {
-  --bg: #f7f4ef;
+  --bg: #f1eef8;
   --surface: #ffffff;
-  --surface-2: #f1ece4;
-  --border: #e3dbcf;
-  --text: #2a2420;
-  --muted: #6f655c;
-  --primary: #c4502f;
-  --primary-hover: #a9431f;
-  --primary-soft: #fbe6dc;
+  --surface-2: #f6f3fc;
+  --border: #e5dff2;
+  --text: #17132b;
+  --muted: #6e6787;
+
+  /* Action principale : pilule encre */
+  --ink: #17132b;
+  --ink-hover: #2e2852;
+  --ink-fg: #ffffff;
+
+  /* Bleu roi : liens, sélection, accent */
+  --primary: #2d5bff;
+  --primary-hover: #1e47e0;
+  --primary-soft: #e4eaff;
   --primary-fg: #ffffff;
-  --accent: #1f6f68;
-  --accent-soft: #dcefec;
-  --success: #2f7d4f;
-  --success-soft: #e0f1e6;
-  --warning: #a8620b;
-  --warning-soft: #fbedd3;
-  --danger: #b42318;
-  --danger-soft: #fde4e1;
-  --info: #3756a8;
-  --info-soft: #e2e8f8;
-  --focus: #c4502f;
-  --shadow: 0 1px 2px rgb(42 36 32 / 0.06), 0 4px 12px rgb(42 36 32 / 0.05);
+
+  --accent: #0f8f6f;
+  --accent-soft: #d6f5e9;
+
+  /* Pastels des tuiles (le texte posé dessus reste toujours à l'encre) */
+  --mint: #c4f0ae;
+  --peach: #ffc4a3;
+  --lilac: #dccbff;
+  --butter: #ffe680;
+  --pink: #ffc8dc;
+  --sky: #c2d9ff;
+  --coral: #ff8a80;
+  --on-pastel: #17132b;
+
+  --success: #16804a;
+  --success-soft: #dcf7e4;
+  --warning: #a35c00;
+  --warning-soft: #fff0c7;
+  --danger: #d0303a;
+  --danger-soft: #ffe1e3;
+  --info: #2d5bff;
+  --info-soft: #e4eaff;
+  --focus: #2d5bff;
+  --shadow: 0 1px 2px rgb(23 19 43 / 0.04), 0 8px 24px rgb(23 19 43 / 0.06);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #171412;
-    --surface: #221e1b;
-    --surface-2: #2b2622;
-    --border: #3a332d;
-    --text: #f2ece5;
-    --muted: #b3a89c;
-    --primary: #e8774f;
-    --primary-hover: #f08d68;
-    --primary-soft: #3d2419;
-    --primary-fg: #1b120d;
-    --accent: #5cc0b5;
-    --accent-soft: #173431;
-    --success: #6fcf97;
+    --bg: #121020;
+    --surface: #1c1930;
+    --surface-2: #252140;
+    --border: #353056;
+    --text: #f4f1ff;
+    --muted: #aaa3c9;
+    --ink: #f4f1ff;
+    --ink-hover: #ffffff;
+    --ink-fg: #17132b;
+    --primary: #8aa6ff;
+    --primary-hover: #a5bbff;
+    --primary-soft: #232c55;
+    --primary-fg: #121020;
+    --accent: #5fd6b2;
+    --accent-soft: #143a31;
+    --success: #6fdc9b;
     --success-soft: #16301f;
-    --warning: #f0b45a;
-    --warning-soft: #362711;
-    --danger: #f28b82;
-    --danger-soft: #3b1714;
-    --info: #9db4f0;
-    --info-soft: #1c2440;
-    --focus: #e8774f;
+    --warning: #ffc861;
+    --warning-soft: #3a2c10;
+    --danger: #ff8d93;
+    --danger-soft: #3f1a1d;
+    --info: #8aa6ff;
+    --info-soft: #232c55;
+    --focus: #8aa6ff;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #171412;
-  --surface: #221e1b;
-  --surface-2: #2b2622;
-  --border: #3a332d;
-  --text: #f2ece5;
-  --muted: #b3a89c;
-  --primary: #e8774f;
-  --primary-hover: #f08d68;
-  --primary-soft: #3d2419;
-  --primary-fg: #1b120d;
-  --accent: #5cc0b5;
-  --accent-soft: #173431;
-  --success: #6fcf97;
+  --bg: #121020;
+  --surface: #1c1930;
+  --surface-2: #252140;
+  --border: #353056;
+  --text: #f4f1ff;
+  --muted: #aaa3c9;
+  --ink: #f4f1ff;
+  --ink-hover: #ffffff;
+  --ink-fg: #17132b;
+  --primary: #8aa6ff;
+  --primary-hover: #a5bbff;
+  --primary-soft: #232c55;
+  --primary-fg: #121020;
+  --accent: #5fd6b2;
+  --accent-soft: #143a31;
+  --success: #6fdc9b;
   --success-soft: #16301f;
-  --warning: #f0b45a;
-  --warning-soft: #362711;
-  --danger: #f28b82;
-  --danger-soft: #3b1714;
-  --info: #9db4f0;
-  --info-soft: #1c2440;
-  --focus: #e8774f;
+  --warning: #ffc861;
+  --warning-soft: #3a2c10;
+  --danger: #ff8d93;
+  --danger-soft: #3f1a1d;
+  --info: #8aa6ff;
+  --info-soft: #232c55;
+  --focus: #8aa6ff;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
   color-scheme: dark;
+}
+
+/*
+ * Sur une tuile pastel, on reste en jetons « clairs » quel que soit le thème :
+ * boutons encre, champs blancs et texte foncé gardent leur contraste.
+ */
+.pastel-scope {
+  --surface: #ffffff;
+  --surface-2: #f6f3fc;
+  --border: #e5dff2;
+  --text: #17132b;
+  --muted: #4f4868;
+  --ink: #17132b;
+  --ink-hover: #2e2852;
+  --ink-fg: #ffffff;
+  --primary: #2d5bff;
+  --primary-hover: #1e47e0;
+  --primary-soft: #e4eaff;
+  --primary-fg: #ffffff;
+  --success: #16804a;
+  --success-soft: #dcf7e4;
+  --warning: #a35c00;
+  --warning-soft: #fff0c7;
+  --danger: #d0303a;
+  --danger-soft: #ffe1e3;
+  --info: #2d5bff;
+  --info-soft: #e4eaff;
+  --focus: #17132b;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -91,12 +146,23 @@
   --color-border: var(--border);
   --color-text: var(--text);
   --color-muted: var(--muted);
+  --color-ink: var(--ink);
+  --color-ink-hover: var(--ink-hover);
+  --color-ink-fg: var(--ink-fg);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-soft: var(--primary-soft);
   --color-primary-fg: var(--primary-fg);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-mint: var(--mint);
+  --color-peach: var(--peach);
+  --color-lilac: var(--lilac);
+  --color-butter: var(--butter);
+  --color-pink: var(--pink);
+  --color-sky: var(--sky);
+  --color-coral: var(--coral);
+  --color-on-pastel: var(--on-pastel);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -106,7 +172,8 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --shadow-card: var(--shadow);
-  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Outfit Variable", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Outfit Variable", system-ui, sans-serif;
 }
 
 html {
@@ -117,7 +184,13 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
+}
+
+h1,
+h2,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 :focus-visible {
@@ -130,11 +203,62 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Les éléments de grille peuvent rétrécir (évite les débordements sur mobile avec du texte tronqué) */
+@layer base {
+  .grid > * {
+    min-width: 0;
+  }
+}
+
+/* Petites animations des bonshommes (désactivées si l'utilisatrice préfère moins de mouvement) */
+@keyframes buddy-bounce {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-6%) rotate(-3deg);
+  }
+}
+@keyframes buddy-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, -20vh, 0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--dx, 0), 110vh, 0) rotate(720deg);
+    opacity: 0.9;
+  }
+}
+.buddy-hover:hover .buddy-body,
+.buddy-bounce .buddy-body {
+  animation: buddy-bounce 1.6s ease-in-out infinite;
+  transform-origin: 50% 90%;
+  transform-box: fill-box;
+}
+.buddy-pop {
+  animation: buddy-pop 0.5s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
@@ -142,6 +266,7 @@ body {
 /* MapLibre : contrôles lisibles en mode sombre */
 .maplibregl-ctrl-group {
   background: var(--surface) !important;
+  border-radius: 14px !important;
 }
 .maplibregl-ctrl-group button + button {
   border-top-color: var(--border) !important;
@@ -149,17 +274,10 @@ body {
 .maplibregl-popup-content {
   background: var(--surface) !important;
   color: var(--text) !important;
-  border-radius: 12px !important;
+  border-radius: 16px !important;
   box-shadow: var(--shadow) !important;
 }
 .maplibregl-popup-tip {
   border-top-color: var(--surface) !important;
   border-bottom-color: var(--surface) !important;
-}
-
-/* Les éléments de grille peuvent rétrécir (évite les débordements sur mobile avec du texte tronqué) */
-@layer base {
-  .grid > * {
-    min-width: 0;
-  }
 }

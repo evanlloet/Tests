@@ -103,7 +103,7 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
             <CardBody className="space-y-2 text-sm">
               <p>{SOURCE_LABEL[appt.source]}</p>
               {event ? (
-                <div className="rounded-xl bg-surface-2 p-3">
+                <div className="rounded-2xl bg-surface-2 p-3">
                   <p className="text-xs text-muted">Événement Outlook d&apos;origine (conservé sans modification)</p>
                   <p className="font-medium">{event.title}</p>
                   <p className="text-muted">

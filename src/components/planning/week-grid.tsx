@@ -8,6 +8,7 @@ import { formatDayShort, formatHHmm } from "@/domain/time";
 import { cn } from "@/lib/cn";
 import { moveAppointmentAction } from "@/server/actions/appointments";
 import type { PlanningDay, PlanningAppointment } from "@/server/services/planning";
+import { DayBuddy } from "../mood-ui";
 import { Notice } from "../ui/notice";
 
 const HOUR_START = 7;
@@ -47,7 +48,7 @@ export function AppointmentChip({ a, compact = false }: { a: PlanningAppointment
 function blockClasses(a: PlanningAppointment) {
   if (a.kind === "unavailable") return "bg-surface-2 text-muted border-border";
   if (a.kind === "other") return "bg-info-soft text-info border-info/40";
-  return "bg-surface text-text";
+  return "text-text";
 }
 
 /** Grille hebdomadaire (ordinateur) avec glisser-déposer des rendez-vous. */
@@ -84,15 +85,19 @@ export function WeekGrid({ days }: { days: PlanningDay[] }) {
   return (
     <div className="space-y-3">
       {message ? <Notice tone={message.tone}>{message.text}</Notice> : null}
-      <div className={cn("overflow-x-auto rounded-2xl border border-border bg-surface", pending && "opacity-70")} aria-busy={pending}>
+      <div className={cn("overflow-x-auto rounded-[28px] border border-border/70 bg-surface shadow-card", pending && "opacity-70")} aria-busy={pending}>
         <div className="grid min-w-[880px]" style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(0, 1fr))` }}>
           <div className="border-b border-border" />
           {days.map((d) => (
             <div key={d.day} className={cn("border-b border-l border-border p-2", d.weekday > 5 && "bg-surface-2/60")}>
-              <Link href={`/planning?vue=jour&date=${d.day}`} className="block text-sm font-semibold capitalize hover:underline">
-                {formatDayShort(d.day)}
+              <Link href={`/planning?vue=jour&date=${d.day}`} className="flex items-center gap-2 hover:underline">
+                <DayBuddy mood={d.mood} size={34} />
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold capitalize">{formatDayShort(d.day)}</span>
+                  <span className="block text-[11px] font-semibold text-muted">{d.mood.label}</span>
+                </span>
               </Link>
-              <div className="mt-1 flex flex-wrap gap-1">
+              <div className="mt-1.5 flex flex-wrap gap-1">
                 {d.sectors.map((s) => (
                   <span key={s.code} className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white" style={{ backgroundColor: s.color }}>
                     {s.name}
@@ -144,13 +149,18 @@ export function WeekGrid({ days }: { days: PlanningDay[] }) {
                     }}
                     onDragEnd={() => setDragging(null)}
                     className={cn(
-                      "absolute inset-x-1 overflow-hidden rounded-lg border border-l-4 px-1.5 py-1 shadow-card transition-shadow hover:z-10 hover:shadow-lg",
+                      "absolute inset-x-1 overflow-hidden rounded-xl border border-l-4 px-1.5 py-1 shadow-card transition-shadow hover:z-10 hover:shadow-lg",
                       blockClasses(a),
                       statusStyle[a.status],
                       a.overlaps && "ring-2 ring-danger/70",
                       a.outcome === "done" && "opacity-75",
                     )}
-                    style={{ top, height: h, borderLeftColor: a.color ?? "var(--muted)" }}
+                    style={{
+                      top,
+                      height: h,
+                      borderLeftColor: a.color ?? "var(--muted)",
+                      backgroundColor: a.kind === "visit" ? `color-mix(in srgb, ${a.color ?? "#9b9188"} 16%, var(--surface))` : undefined,
+                    }}
                     title={`${a.title} — ${formatHHmm(a.start)}–${formatHHmm(a.end)}`}
                   >
                     <AppointmentChip a={a} compact={h < 36} />

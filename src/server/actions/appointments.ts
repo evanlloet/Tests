@@ -116,7 +116,7 @@ export async function completeVisitAction(_prev: ActionResult | null, formData: 
     return toActionError(err);
   }
   revalidatePath("/", "layout");
-  redirect(`/pharmacies/${pharmacyId}/prochaine-visite?terminee=1`);
+  redirect(`/pharmacies/${pharmacyId}/prochaine-visite?terminee=1${parsed.data.summary ? "&cr=1" : ""}`);
 }
 
 export async function setOutcomeAction(formData: FormData): Promise<ActionResult> {

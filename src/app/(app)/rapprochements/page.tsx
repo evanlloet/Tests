@@ -2,9 +2,13 @@ import { GitCompareArrows } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/action-form";
+import { Buddy } from "@/components/buddy";
 import { MatchList, type MatchCardData } from "@/components/match-card";
+import { ProgressBar } from "@/components/mood-ui";
+import { Tile } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { POINTS } from "@/domain/gamification";
 import { isAmbiguous } from "@/domain/matching";
 import { formatDateTime } from "@/domain/time";
 import { rematchAction, validateManyAction } from "@/server/actions/calendar";
@@ -35,6 +39,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
   const ids = [...new Set(rows.flatMap((r) => [...r.match.candidates.map((c) => c.pharmacyId), r.match.pharmacyId].filter(Boolean) as string[]))];
   const byId = await pharmaciesByIds(db, user.id, ids);
   const options = await pickerOptions(db, user.id);
+  const resolved = counts.auto_validated + counts.validated + counts.ignored;
 
   const cards: MatchCardData[] = rows.map(({ match: m, event: e }) => {
     const candidates = m.candidates
@@ -81,18 +86,34 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
           </ActionForm>
         }
       />
-      <nav className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface p-1" aria-label="Filtres">
+      <nav className="mb-4 flex gap-1 overflow-x-auto rounded-full border border-border bg-surface p-1 shadow-card" aria-label="Filtres">
         {TABS.map((t) => (
           <Link
             key={t.key}
             href={`/rapprochements?statut=${t.key}`}
             aria-current={filter === t.key ? "page" : undefined}
-            className={`rounded-lg px-3 py-1.5 text-sm whitespace-nowrap ${filter === t.key ? "bg-primary text-primary-fg" : "text-muted hover:text-text"}`}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap ${filter === t.key ? "bg-ink text-ink-fg" : "text-muted hover:text-text"}`}
           >
             {t.label} <span className="tabular-nums opacity-80">({counts[t.key]})</span>
           </Link>
         ))}
       </nav>
+
+      {resolved + counts.to_review > 0 ? (
+        <Tile color={counts.to_review ? "lilac" : "mint"} className="mb-4 flex items-center gap-4">
+          <Buddy mood={counts.to_review ? "calm" : "joy"} shape="bolt" color={counts.to_review ? "purple" : "green"} size={56} animate={!counts.to_review} />
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-lg leading-tight font-bold">
+              {counts.to_review ? `Mode détective : ${counts.to_review} indice(s) à vérifier` : "Enquête bouclée, tout est rapproché !"}
+            </p>
+            <ProgressBar value={resolved} target={resolved + counts.to_review} className="mt-2 bg-white/60" />
+            <p className="mt-1 text-xs opacity-75">
+              {resolved.toLocaleString("fr-FR")} / {(resolved + counts.to_review).toLocaleString("fr-FR")} rendez-vous rapprochés
+              {user.gamificationEnabled && counts.to_review ? ` · +${POINTS.manualValidation} points par carte vérifiée (validée ou ignorée)` : ""}
+            </p>
+          </div>
+        </Tile>
+      ) : null}
 
       {bulkIds.length > 1 ? (
         <ActionForm action={validateManyAction} className="mb-4">

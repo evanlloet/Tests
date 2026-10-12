@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { DayList } from "@/components/planning/day-list";
+import { MonthCalendar } from "@/components/planning/month-calendar";
 import { WeekGrid } from "@/components/planning/week-grid";
 import { LinkButton } from "@/components/ui/button";
 import { Select } from "@/components/ui/form";
@@ -23,20 +24,31 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const today = todayFor(user);
   const date = sp.date && isDayKey(sp.date) ? sp.date : today;
-  const view = sp.vue === "jour" ? "jour" : "semaine";
+  const view = sp.vue === "jour" ? "jour" : sp.vue === "mois" ? "mois" : "semaine";
   const weekStart = startOfIsoWeek(date);
-  const from = view === "jour" ? date : weekStart;
-  const to = view === "jour" ? date : addDays(weekStart, 6);
+  const month = date.slice(0, 7);
+  const monthStart = `${month}-01`;
+  const nextMonthStart = shiftMonth(monthStart, 1);
+  const from = view === "jour" ? date : view === "mois" ? startOfIsoWeek(monthStart) : weekStart;
+  const to = view === "jour" ? date : view === "mois" ? addDays(startOfIsoWeek(addDays(nextMonthStart, -1)), 6) : addDays(weekStart, 6);
   const days = await getPlanning(db, user, from, to);
   const { templates, active, isOverride } = await activeTemplateForWeek(db, user.id, weekStart);
-  const step = view === "jour" ? 1 : 7;
-  const href = (d: string, v = view) => `/planning?vue=${v}&date=${d}`;
+  const move = (dir: 1 | -1) => (view === "jour" ? addDays(date, dir) : view === "mois" ? shiftMonth(monthStart, dir) : addDays(date, dir * 7));
+  const href = (d: string, v: string = view) => `/planning?vue=${v}&date=${d}`;
+  const subtitle =
+    view === "jour" ? (
+      <span className="capitalize">{formatDayLong(date)}</span>
+    ) : view === "mois" ? (
+      <span className="capitalize">{new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${monthStart}T12:00:00Z`))}</span>
+    ) : (
+      `Semaine du ${formatDayShort(weekStart)} au ${formatDayShort(addDays(weekStart, 6))}`
+    );
 
   return (
     <>
       <PageHeader
         title="Planning"
-        subtitle={view === "jour" ? <span className="capitalize">{formatDayLong(date)}</span> : `Semaine du ${formatDayShort(weekStart)} au ${formatDayShort(to)}`}
+        subtitle={subtitle}
         actions={
           <>
             <LinkButton href={`/tournees?date=${date}`} variant="secondary">
@@ -51,25 +63,25 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
       {sp.ok ? <Notice tone="success" className="mb-4">{sp.ok}</Notice> : null}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="flex items-center rounded-xl border border-border bg-surface">
-          <Link href={href(addDays(date, -step))} className="p-2.5 hover:bg-surface-2" aria-label="Période précédente">
+        <div className="flex items-center rounded-full border border-border bg-surface shadow-card">
+          <Link href={href(move(-1))} className="rounded-full p-2.5 hover:bg-surface-2" aria-label="Période précédente">
             <ChevronLeft className="size-5" />
           </Link>
-          <Link href={href(today)} className="px-3 text-sm font-medium hover:underline">
+          <Link href={href(today)} className="px-3 text-sm font-semibold hover:underline">
             Aujourd&apos;hui
           </Link>
-          <Link href={href(addDays(date, step))} className="p-2.5 hover:bg-surface-2" aria-label="Période suivante">
+          <Link href={href(move(1))} className="rounded-full p-2.5 hover:bg-surface-2" aria-label="Période suivante">
             <ChevronRight className="size-5" />
           </Link>
         </div>
-        <div className="flex rounded-xl border border-border bg-surface p-1 text-sm" role="tablist">
-          {(["jour", "semaine"] as const).map((v) => (
+        <div className="flex rounded-full border border-border bg-surface p-1 text-sm shadow-card" role="tablist">
+          {(["jour", "semaine", "mois"] as const).map((v) => (
             <Link
               key={v}
               href={href(date, v)}
               role="tab"
               aria-selected={view === v}
-              className={`rounded-lg px-3 py-1.5 capitalize ${view === v ? "bg-primary text-primary-fg" : "text-muted hover:text-text"}`}
+              className={`rounded-full px-3.5 py-1.5 font-semibold capitalize ${view === v ? "bg-ink text-ink-fg" : "text-muted hover:text-text"}`}
             >
               {v}
             </Link>
@@ -96,7 +108,9 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
         ) : null}
       </div>
 
-      {view === "semaine" ? (
+      {view === "mois" ? (
+        <MonthCalendar days={days} month={month} today={today} />
+      ) : view === "semaine" ? (
         <>
           <div className="hidden lg:block">
             <WeekGrid days={days} />
@@ -116,4 +130,11 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
       )}
     </>
   );
+}
+
+/** Premier jour du mois décalé de `n` mois. */
+function shiftMonth(monthStart: string, n: number): string {
+  const d = new Date(`${monthStart}T12:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + n, 1);
+  return d.toISOString().slice(0, 10);
 }

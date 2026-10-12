@@ -229,12 +229,12 @@ export function LeaMap({
       {/* MapLibre impose position: relative au conteneur : on le dimensionne en hauteur pleine */}
       <div ref={container} className="h-full w-full" role="region" aria-label="Carte" />
       {!TILES || tileError ? (
-        <p className="absolute bottom-2 left-2 rounded-lg bg-surface/90 px-2 py-1 text-xs text-muted shadow">
+        <p className="absolute bottom-2 left-2 rounded-full bg-surface/90 px-2 py-1 text-xs text-muted shadow">
           Fond de carte indisponible ({TILES ? "service de tuiles injoignable" : "aucun service configuré"}) : les points restent affichés.
         </p>
       ) : null}
       {stops.length > 1 ? (
-        <p className="absolute top-2 left-2 rounded-lg bg-surface/90 px-2 py-1 text-xs text-muted shadow">
+        <p className="absolute top-2 left-2 rounded-full bg-surface/90 px-2 py-1 text-xs text-muted shadow">
           {lineIsEstimate ? "Tracé indicatif (lignes droites) — pas un itinéraire routier" : "Itinéraire routier"}
         </p>
       ) : null}

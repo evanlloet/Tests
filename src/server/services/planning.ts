@@ -1,6 +1,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { hasLocation, type LatLng } from "@/domain/geo";
+import { dayMood, type DayMoodKey, type LoadLevel, type MoodVisual } from "@/domain/mood";
 import { publicHolidayName } from "@/domain/holidays";
 import { estimateLeg } from "@/domain/routing/estimate";
 import { addDays, dayKeyOf, isoWeekday, minutesOfDay, parseHHmm, zonedDateTime, type DayKey } from "@/domain/time";
@@ -26,7 +27,7 @@ export type PlanningAppointment = {
   overlaps: boolean;
 };
 
-export type LoadLevel = "vide" | "légère" | "équilibrée" | "chargée" | "trop chargée";
+export type { LoadLevel } from "@/domain/mood";
 
 export type PlanningDay = {
   day: DayKey;
@@ -42,6 +43,9 @@ export type PlanningDay = {
   driveKm: number | null;
   load: LoadLevel;
   warnings: string[];
+  mood: MoodVisual & { key: DayMoodKey };
+  /** Toutes les visites passées de la journée sont clôturées (réalisées ou non) */
+  allClosed: boolean;
 };
 
 export async function getPlanning(db: Db, user: SessionUser, from: DayKey, to: DayKey): Promise<PlanningDay[]> {
@@ -113,7 +117,10 @@ export async function getPlanning(db: Db, user: SessionUser, from: DayKey, to: D
     const offSector = visits.filter((v) => v.pharmacy?.departmentCode && sectorCodes.size && !sectorCodes.has(v.pharmacy.departmentCode));
     if (offSector.length) warnings.push(`${offSector.length} visite(s) hors du secteur prévu`);
 
+    const overlaps = list.some((a) => a.overlaps);
     days.push({
+      mood: dayMood({ load, weekday: isoWeekday(day), holiday, visits: visits.length, overlaps }),
+      allClosed: visits.length > 0 && visits.every((v) => v.outcome !== "unknown"),
       day,
       weekday: isoWeekday(day),
       holiday,

@@ -15,7 +15,7 @@ sans validation.
 | Brief (§ 20) | État | Où |
 |---|---|---|
 | 1. Accueil : rendez-vous du jour, prochaines actions, grand bouton « Rendez-vous terminé » | ✅ | `/` |
-| 2. Calendrier jour / semaine, création, modification, glisser-déposer | ✅ | `/planning` |
+| 2. Calendrier jour / semaine / mois, création, modification, glisser-déposer | ✅ | `/planning` |
 | 3. Référentiel : recherche, filtres (secteur, catégorie, échéance), fiches | ✅ | `/pharmacies` |
 | 4. Import CSV des pharmacies (rejouable, sans doublons) | ✅ | `/pharmacies/import` |
 | 5. Import calendrier ICS / CSV Outlook : prévisualisation, normalisation, doublons | ✅ | `/imports` |
@@ -38,6 +38,29 @@ sans validation.
 - **Journal des modifications** (`audit_logs`) pour tout changement de planning, rapprochement et référentiel.
 - **Export JSON** de toutes ses données et **suppression du compte** (cascade).
 - Mode clair / sombre, navigation inférieure sur mobile, barre latérale sur ordinateur.
+
+### Interface ludique (V1.1)
+
+- **Design coloré** : fond lilas, tuiles pastel, boutons « pilule » encre, polices auto-hébergées (Bricolage
+  Grotesque pour les titres, Outfit pour le texte). Jetons CSS clairs / sombres ; sur une tuile pastel les jetons
+  restent « clairs » (`.pastel-scope`) pour garder le contraste en mode sombre.
+- **Bonshommes d'humeur** (SVG maison, 6 formes × 8 humeurs) : chaque journée a le sien selon sa **charge réelle**
+  (visites + trajets estimés + pause comparés à l'amplitude, alertes), pas seulement le nombre de rendez-vous :
+  « Tranquille », « Idéale », « Chargée », « Trop chargée », « Libre », week-end / férié
+  (`src/domain/mood.ts`). Visibles sur l'accueil, la semaine, la vue jour et la nouvelle **vue mois** (calendrier
+  d'humeur).
+- **Fiches pharmacie ludiques** : avatar propre à chaque pharmacie dont l'humeur suit l'échéance (en avance,
+  prévue, bientôt due, en retard, jamais vue), cœurs pour les visites de l'année, frise « Votre histoire ensemble »,
+  comptes rendus en bulles, détails repliables.
+- **Accueil pas à pas** (`/bienvenue`), enregistré en base étape par étape et reprenable : domicile (communes du
+  secteur ou coordonnées), départements couverts, semaine type, rythme (horaires, pause, durée de visite), fréquences
+  ABCD, choix du jeu, visite guidée des fonctionnalités, puis premiers imports. Rejouable depuis le profil ; les
+  comptes créés avant cette version sont marqués comme accueillis par la migration `0001`.
+- **Gamification facultative** (désactivable dans le profil ou `/recompenses`) : points, 8 niveaux (de Graine à
+  Légende), 12 badges, 4 défis hebdomadaires, « série douce » (les jours sans visite ne la cassent pas), célébration
+  après « Rendez-vous terminé ». Tout est **recalculé à partir des faits en base** (visites clôturées, comptes rendus,
+  rapprochements vérifiés, km économisés par une tournée appliquée) : aucun compteur ne peut diverger. Valider ou
+  ignorer un rapprochement rapporte autant, pour ne pas inciter à valider à tort.
 
 ### Critères d'acceptation du MVP (§ 19)
 
@@ -105,7 +128,8 @@ Aucun secret n'est envoyé au navigateur. Les clés éventuelles (OSRM privé, e
 
 ## Premiers pas (avec les vraies données)
 
-1. **Profil** : domicile (adresse ou coordonnées), horaires, durée de visite, pause, fréquences ABCD.
+1. **Accueil pas à pas** (proposé à l'inscription) : domicile, secteurs, semaine type, rythme, fréquences ABCD. Tout
+   reste modifiable ensuite dans le **Profil**.
 2. **Pharmacies › Importer un CSV** : le fichier de la commerciale ou une extraction FINESS retravaillée.
 3. **Imports Outlook** : exporter ~2 ans de calendrier en `.ics` (recommandé) ou `.csv`, prévisualiser, confirmer.
 4. **Rapprochements** : valider, corriger (« Choisir une autre pharmacie ») ou ignorer les cas incertains.
@@ -167,6 +191,8 @@ src/
     analytics/     Analyse de l'historique
     matching.ts    Rapprochement agenda ↔ pharmacies
     frequency.ts   Fréquences ABCD et échéances
+    mood.ts        Humeur des journées et des pharmacies (bonshommes)
+    gamification.ts Points, niveaux, badges, défis, série douce (calcul pur)
   integrations/    Fournisseurs remplaçables : routage (OSRM / estimation), géocodage
   server/
     db/            Schéma Drizzle (PostgreSQL) et client
@@ -213,14 +239,15 @@ Les 16 tables du brief (`users`, `pharmacies`, `pharmacy_metrics`, `pharmacy_pre
 
 ```bash
 npm run typecheck && npm run lint
-npm test                 # 102 tests unitaires et d'intégration (PostgreSQL requis : base lea_test)
+npm test                 # 112 tests unitaires et d'intégration (PostgreSQL requis : base lea_test)
 npm run test:e2e         # parcours complet dans Chromium (application démarrée ; CHROMIUM_PATH si besoin)
 ```
 
 Les tests d'intégration utilisent `TEST_DATABASE_URL` (défaut `postgres://lea:lea@localhost:5432/lea_test`).
 Le parcours e2e génère des **données de test fictives** (noms inventés, communes réelles) et vérifie notamment :
-réimports sans doublons, rapprochement, glisser-déposer, application d'un scénario de tournée, export, données
-intactes après reconnexion, absence d'erreur JavaScript et de débordement sur mobile.
+accueil pas à pas, réimports sans doublons, rapprochement, glisser-déposer, clôture d'une visite et points gagnés,
+application d'un scénario de tournée, export, données intactes après reconnexion, absence d'erreur JavaScript et de
+débordement sur mobile.
 
 ---
 

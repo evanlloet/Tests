@@ -123,7 +123,7 @@ export function TravelForm({ values, geocoder }: { values: TravelValues; geocode
             ))}
           </div>
         </fieldset>
-        <details className="rounded-xl border border-border p-3 text-sm">
+        <details className="rounded-2xl border border-border p-3 text-sm">
           <summary className="cursor-pointer font-medium">Paramètres de l&apos;estimation sans moteur de routage</summary>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <Field label="Vitesse longue distance (km/h)" htmlFor="estimateSpeedKmh">

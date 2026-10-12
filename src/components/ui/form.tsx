@@ -2,7 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 const field =
-  "w-full rounded-xl border border-border bg-surface px-3 text-sm text-text placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60";
+  "w-full rounded-2xl border border-border bg-surface px-3.5 text-sm text-text placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 disabled:opacity-60";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(field, "h-11", className)} {...props} />;
@@ -51,7 +51,7 @@ export function Field({
 export function Checkbox({ label, className, ...props }: ComponentProps<"input"> & { label: ReactNode }) {
   return (
     <label className={cn("inline-flex items-center gap-2 text-sm", className)}>
-      <input type="checkbox" className="size-4 rounded border-border accent-[var(--primary)]" {...props} />
+      <input type="checkbox" className="size-4.5 shrink-0 rounded border-border accent-[var(--primary)]" {...props} />
       {label}
     </label>
   );

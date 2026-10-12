@@ -3,17 +3,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CategoryBadge, SectorDot } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
-import { DueBadge, LastVisit, YearProgress } from "@/components/visit-status";
+import { Hearts, PharmacyAvatar, pharmacyMoodSentence } from "@/components/mood-ui";
+import { DueBadge } from "@/components/visit-status";
 import { DUE_STATE_LABELS, type DueState } from "@/domain/frequency";
+import { formatDayShort } from "@/domain/time";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db/client";
 import { countPharmacies } from "@/server/repositories/pharmacies";
 import { listTerritories } from "@/server/repositories/territories";
-import { todayFor } from "@/server/services/context";
 import { getPharmacyOverview } from "@/server/services/pharmacy-overview";
 
 export const metadata: Metadata = { title: "Pharmacies" };
@@ -32,7 +32,6 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: P
     ? await getPharmacyOverview(user, { q: sp.q, department: sp.dept || undefined, category, due, sort })
     : [];
   const limit = Math.min(Number(sp.limite) || PAGE, 2000);
-  const today = todayFor(user);
 
   return (
     <>
@@ -62,40 +61,44 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: P
         </EmptyState>
       ) : (
         <>
-          <form className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_auto_auto_auto_auto_auto]" role="search">
-            <Input name="q" defaultValue={sp.q} placeholder="Nom, commune, code postal, FINESS…" aria-label="Rechercher" className="col-span-2 sm:col-span-1" />
-            <Select name="dept" defaultValue={sp.dept ?? ""} aria-label="Département">
-              <option value="">Tous secteurs</option>
-              {territories.map((t) => (
-                <option key={t.id} value={t.code}>
-                  {t.name} ({t.code})
-                </option>
-              ))}
-            </Select>
-            <Select name="cat" defaultValue={sp.cat ?? ""} aria-label="Catégorie">
-              <option value="">Toutes catégories</option>
-              {["A", "B", "C", "D"].map((c) => (
-                <option key={c} value={c}>
-                  Catégorie {c}
-                </option>
-              ))}
-              <option value="none">Sans catégorie</option>
-            </Select>
-            <Select name="due" defaultValue={sp.due ?? ""} aria-label="Échéance">
-              <option value="">Toutes échéances</option>
-              {(Object.entries(DUE_STATE_LABELS) as [DueState, string][]).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </Select>
-            <Select name="tri" defaultValue={sp.tri ?? "urgence"} aria-label="Tri">
-              <option value="urgence">Plus urgentes d'abord</option>
-              <option value="nom">Ordre alphabétique</option>
-            </Select>
-            <button type="submit" className="h-11 rounded-xl bg-text px-4 text-sm font-medium text-bg">
-              Filtrer
-            </button>
+          <form className="mb-4 space-y-2" role="search">
+            <div className="flex gap-2">
+              <Input name="q" defaultValue={sp.q} placeholder="Nom, commune, code postal, FINESS…" aria-label="Rechercher" className="min-w-0 flex-1" />
+              <button type="submit" className="h-11 shrink-0 rounded-full bg-ink px-5 text-sm font-semibold text-ink-fg">
+                Filtrer
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <Select name="dept" defaultValue={sp.dept ?? ""} aria-label="Département">
+                <option value="">Tous secteurs</option>
+                {territories.map((t) => (
+                  <option key={t.id} value={t.code}>
+                    {t.name} ({t.code})
+                  </option>
+                ))}
+              </Select>
+              <Select name="cat" defaultValue={sp.cat ?? ""} aria-label="Catégorie">
+                <option value="">Toutes catégories</option>
+                {["A", "B", "C", "D"].map((c) => (
+                  <option key={c} value={c}>
+                    Catégorie {c}
+                  </option>
+                ))}
+                <option value="none">Sans catégorie</option>
+              </Select>
+              <Select name="due" defaultValue={sp.due ?? ""} aria-label="Échéance">
+                <option value="">Toutes échéances</option>
+                {(Object.entries(DUE_STATE_LABELS) as [DueState, string][]).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </Select>
+              <Select name="tri" defaultValue={sp.tri ?? "urgence"} aria-label="Tri">
+                <option value="urgence">Plus urgentes d'abord</option>
+                <option value="nom">Ordre alphabétique</option>
+              </Select>
+            </div>
           </form>
 
           <p className="mb-2 text-sm text-muted" aria-live="polite">
@@ -105,36 +108,34 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: P
           {items.length === 0 ? (
             <EmptyState title="Aucune pharmacie ne correspond à ces filtres" />
           ) : (
-            <Card className="divide-y divide-border overflow-hidden">
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {items.slice(0, limit).map(({ pharmacy: p, metrics, status, territory }) => (
-                <Link
-                  key={p.id}
-                  href={`/pharmacies/${p.id}`}
-                  className="grid gap-2 px-4 py-3 transition-colors hover:bg-surface-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_auto] sm:items-center sm:gap-4"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <SectorDot color={territory?.color} />
-                      <span className="truncate font-medium">{p.name}</span>
-                      <CategoryBadge category={metrics?.category} />
+                <li key={p.id}>
+                  <Link
+                    href={`/pharmacies/${p.id}`}
+                    className="flex h-full gap-3 rounded-[24px] border border-border/70 bg-surface p-4 shadow-card transition hover:-translate-y-0.5 hover:shadow-lg"
+                  >
+                    <PharmacyAvatar id={p.id} dueState={status.dueState} size={52} className="buddy-hover" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-display text-base leading-tight font-bold">{p.name}</span>
+                        <CategoryBadge category={metrics?.category} />
+                      </div>
+                      <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted">
+                        <SectorDot color={territory?.color} className="size-2" />
+                        {[p.postalCode, p.city].filter(Boolean).join(" ") || "Adresse inconnue"}
+                        {p.lat === null ? " · non géolocalisée" : ""}
+                      </p>
+                      <p className="mt-2 text-sm leading-snug">{pharmacyMoodSentence(status, formatDayShort)}</p>
+                      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                        <Hearts value={status.year.done + status.year.identified} planned={status.year.planned} target={status.year.target} size={14} />
+                        <DueBadge status={status} />
+                      </div>
                     </div>
-                    <p className="mt-0.5 truncate pl-4.5 text-sm text-muted">
-                      {[p.postalCode, p.city].filter(Boolean).join(" ") || "Adresse inconnue"}
-                      {p.lat === null ? " · non géolocalisée" : ""}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 pl-4.5 text-sm sm:pl-0">
-                    <DueBadge status={status} />
-                    <span className="text-muted">
-                      Dernière : <LastVisit status={status} today={today} />
-                    </span>
-                  </div>
-                  <div className="pl-4.5 sm:pl-0">
-                    <YearProgress status={status} />
-                  </div>
-                </Link>
+                  </Link>
+                </li>
               ))}
-            </Card>
+            </ul>
           )}
           {items.length > limit ? (
             <div className="mt-4 text-center">

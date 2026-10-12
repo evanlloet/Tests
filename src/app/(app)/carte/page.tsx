@@ -52,7 +52,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
         actions={
           <form className="flex items-center gap-2">
             <Input type="date" name="date" defaultValue={day} aria-label="Date" className="h-10 w-auto" />
-            <button type="submit" className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-medium hover:bg-surface-2">
+            <button type="submit" className="h-10 rounded-full border border-border bg-surface px-4 text-sm font-semibold hover:bg-surface-2">
               Afficher
             </button>
           </form>

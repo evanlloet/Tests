@@ -78,7 +78,7 @@ export function CalendarImportForm() {
               <Stat label="Déjà connus" value={r.unchangedEvents} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-surface-2 p-3 text-sm">
+              <div className="rounded-2xl bg-surface-2 p-3 text-sm">
                 <p className="font-medium">Classement des nouveaux événements</p>
                 <ul className="mt-1 text-muted">
                   <li>{r.classification.visit} visite(s) probable(s)</li>
@@ -88,7 +88,7 @@ export function CalendarImportForm() {
                   {r.duplicatesInFile ? <li>{r.duplicatesInFile} doublon(s) dans le fichier</li> : null}
                 </ul>
               </div>
-              <div className="rounded-xl bg-surface-2 p-3 text-sm">
+              <div className="rounded-2xl bg-surface-2 p-3 text-sm">
                 <p className="font-medium">Rapprochement avec les pharmacies</p>
                 <ul className="mt-1 text-muted">
                   <li>{r.matches.auto_validated} validé(s) automatiquement (confiance élevée)</li>
@@ -100,7 +100,7 @@ export function CalendarImportForm() {
               </div>
             </div>
             {r.warnings.length ? (
-              <details className="rounded-xl border border-border p-3 text-sm">
+              <details className="rounded-2xl border border-border p-3 text-sm">
                 <summary className="cursor-pointer font-medium">{r.warnings.length} remarque(s)</summary>
                 <ul className="mt-2 max-h-60 space-y-1 overflow-auto text-muted">
                   {r.warnings.map((w, i) => (
@@ -173,7 +173,7 @@ function PreviewCard({ p }: { p: CalendarPreview }) {
           </div>
         ) : null}
         {p.warnings.length ? (
-          <details className="rounded-xl border border-border p-3 text-sm">
+          <details className="rounded-2xl border border-border p-3 text-sm">
             <summary className="cursor-pointer font-medium">{p.warnings.length} remarque(s)</summary>
             <ul className="mt-2 max-h-60 space-y-1 overflow-auto text-muted">
               {p.warnings.map((w, i) => (

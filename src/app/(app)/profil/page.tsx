@@ -8,15 +8,16 @@ import { DeleteAccountForm } from "@/components/delete-account";
 import { AddTerritoryForm, FavoritePlaceForm, SettingsForm, TravelForm } from "@/components/profile-forms";
 import { Badge, SectorDot } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Buddy } from "@/components/buddy";
+import { Card, CardBody, CardHeader, Tile } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
-import { PageHeader } from "@/components/ui/page-header";
 import { WeekTemplateEditor } from "@/components/week-template-editor";
 import { DEPARTMENTS } from "@/domain/departments";
 import { geocoderConfigured } from "@/integrations/geocoding/geoplateforme";
 import { routingStatus } from "@/integrations/routing";
 import { logoutAction } from "@/server/actions/auth";
-import { deleteFavoritePlaceAction, setThemeAction } from "@/server/actions/profile";
+import { restartOnboardingAction } from "@/server/actions/onboarding";
+import { deleteFavoritePlaceAction, setGamificationAction, setThemeAction } from "@/server/actions/profile";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db/client";
 import { favoritePlaces } from "@/server/db/schema";
@@ -52,7 +53,18 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHeader title="Profil et préférences" subtitle={u.email} />
+      <Tile color="lilac" className="mb-4 flex items-center gap-4 p-5">
+        <Buddy mood="happy" shape="flower" color="yellow" size={72} className="buddy-hover" />
+        <div className="min-w-0">
+          <h1 className="text-3xl font-extrabold">{u.displayName}</h1>
+          <p className="truncate text-sm opacity-75">{u.email}</p>
+          {user.gamificationEnabled ? (
+            <Link href="/recompenses" className="mt-1 inline-block text-sm font-semibold underline">
+              Voir mes récompenses
+            </Link>
+          ) : null}
+        </div>
+      </Tile>
       {sp.bienvenue ? (
         <Notice tone="success" title="Votre espace est prêt" className="mb-4">
           Le territoire (Calvados, Manche, Orne, Ille-et-Vilaine, Mayenne) et les deux modèles de semaine du brief sont déjà configurés.
@@ -76,12 +88,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           </ol>
           <nav className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4 text-sm lg:hidden" aria-label="Autres écrans">
             {[
+              ...(user.gamificationEnabled ? [["/recompenses", "Récompenses"]] : []),
               ["/tournees", "Tournées"],
               ["/imports", "Imports Outlook"],
               ["/rapprochements", `Rapprochements${pending ? ` (${pending})` : ""}`],
               ["/pilotage", "Pilotage"],
             ].map(([href, label]) => (
-              <Link key={href} href={href!} className="rounded-xl border border-border px-3 py-2 font-medium hover:bg-surface-2">
+              <Link key={href} href={href!} className="rounded-full border border-border px-4 py-2 font-semibold hover:bg-surface-2">
                 {label}
               </Link>
             ))}
@@ -240,11 +253,26 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                   name="theme"
                   value={value}
                   aria-pressed={theme === value}
-                  className={`rounded-xl border px-3 py-1.5 text-sm ${theme === value ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface-2"}`}
+                  className={`rounded-full border px-4 py-1.5 text-sm font-semibold ${theme === value ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface-2"}`}
                 >
                   {label}
                 </button>
               ))}
+            </form>
+            <form action={setGamificationAction} className="flex items-center justify-between gap-3 rounded-[20px] bg-surface-2 p-3">
+              <span className="text-sm">
+                <span className="block font-semibold">Récompenses (points, badges, défis)</span>
+                <span className="block text-xs text-muted">{user.gamificationEnabled ? "Activées" : "En pause"} · facultatives, sans classement</span>
+              </span>
+              {user.gamificationEnabled ? null : <input type="hidden" name="enabled" value="on" />}
+              <button type="submit" className="rounded-full border border-border bg-surface px-4 py-1.5 text-sm font-semibold hover:bg-surface-2">
+                {user.gamificationEnabled ? "Mettre en pause" : "Activer"}
+              </button>
+            </form>
+            <form action={restartOnboardingAction}>
+              <button type="submit" className="text-sm font-semibold text-primary underline-offset-4 hover:underline">
+                Rejouer l'accueil et la visite guidée
+              </button>
             </form>
             <form action={logoutAction}>
               <SubmitButtonLogout />
@@ -255,7 +283,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 Toutes vos données sont stockées dans la base de l&apos;application, isolées par compte. Vous pouvez les exporter à tout moment
                 (fichier JSON) ou les supprimer définitivement.
               </p>
-              <a href="/api/export" className="inline-flex h-10 items-center rounded-xl border border-border px-4 text-sm font-medium hover:bg-surface-2">
+              <a href="/api/export" className="inline-flex h-10 items-center rounded-full border border-border px-4 text-sm font-semibold hover:bg-surface-2">
                 Exporter mes données
               </a>
               <DeleteAccountForm />
@@ -269,7 +297,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
 function SubmitButtonLogout() {
   return (
-    <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border px-4 text-sm font-medium hover:bg-surface-2">
+    <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-full border border-border px-4 text-sm font-semibold hover:bg-surface-2">
       <LogOut className="size-4" aria-hidden /> Se déconnecter
     </button>
   );

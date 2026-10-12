@@ -14,7 +14,7 @@ const icons = { info: Info, success: CheckCircle2, warning: AlertTriangle, dange
 export function Notice({ tone = "info", title, children, className }: { tone?: Tone; title?: ReactNode; children?: ReactNode; className?: string }) {
   const Icon = icons[tone];
   return (
-    <div role={tone === "danger" ? "alert" : "status"} className={cn("flex gap-3 rounded-xl border px-3.5 py-3 text-sm", styles[tone], className)}>
+    <div role={tone === "danger" ? "alert" : "status"} className={cn("flex gap-3 rounded-2xl border px-4 py-3 text-sm", styles[tone], className)}>
       <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
       <div className="min-w-0 space-y-1">
         {title ? <p className="font-semibold">{title}</p> : null}
@@ -26,9 +26,9 @@ export function Notice({ tone = "info", title, children, className }: { tone?: T
 
 export function EmptyState({ icon, title, children, action }: { icon?: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-10 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-[28px] border-2 border-dashed border-border bg-surface/60 px-6 py-10 text-center">
       {icon ? <div className="text-muted">{icon}</div> : null}
-      <p className="font-semibold">{title}</p>
+      <p className="font-display text-lg font-bold">{title}</p>
       {children ? <div className="max-w-md text-sm text-muted">{children}</div> : null}
       {action}
     </div>

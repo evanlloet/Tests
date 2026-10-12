@@ -72,7 +72,7 @@ export function MapExplorer({
                       onClick={() => setSelected(key)}
                       aria-pressed={selected === key}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm",
+                        "flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left text-sm",
                         selected === key ? "border-primary bg-primary-soft" : "border-border bg-surface hover:bg-surface-2",
                       )}
                     >
@@ -89,7 +89,7 @@ export function MapExplorer({
         <section>
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Pharmacies</h2>
-            <div className="flex rounded-lg border border-border p-0.5 text-xs">
+            <div className="flex rounded-full border border-border p-0.5 text-xs">
               {(
                 [
                   ["todo", "À visiter"],
@@ -101,7 +101,7 @@ export function MapExplorer({
                   type="button"
                   onClick={() => setFilter(k)}
                   aria-pressed={filter === k}
-                  className={cn("rounded-md px-2 py-1", filter === k ? "bg-primary text-primary-fg" : "text-muted")}
+                  className={cn("rounded-full px-2.5 py-1", filter === k ? "bg-ink text-ink-fg" : "text-muted")}
                 >
                   {l}
                 </button>
@@ -114,7 +114,7 @@ export function MapExplorer({
               <li key={p.id} data-id={p.id}>
                 <div
                   className={cn(
-                    "flex items-center gap-2 rounded-xl border px-3 py-2 text-sm",
+                    "flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm",
                     selected === p.id ? "border-primary bg-primary-soft" : "border-transparent hover:bg-surface-2",
                   )}
                 >

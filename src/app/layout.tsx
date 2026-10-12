@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
+import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/outfit";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,8 +15,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f4ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#171412" },
+    { media: "(prefers-color-scheme: light)", color: "#f1eef8" },
+    { media: "(prefers-color-scheme: dark)", color: "#121020" },
   ],
 };
 

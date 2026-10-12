@@ -15,7 +15,7 @@ export function LoginForm() {
     <Card>
       <CardBody>
         <form action={action} onSubmit={submitWithoutReset(action)} className="space-y-4">
-          <h1 className="text-lg font-semibold">Connexion</h1>
+          <h2 className="text-2xl font-extrabold">Connexion</h2>
           {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
           <Field label="E-mail" htmlFor="email">
             <Input id="email" name="email" type="email" autoComplete="email" required inputMode="email" />
@@ -51,7 +51,7 @@ export function SignupForm({ enabled }: { enabled: boolean }) {
     <Card>
       <CardBody>
         <form action={action} onSubmit={submitWithoutReset(action)} className="space-y-4">
-          <h1 className="text-lg font-semibold">Créer votre compte</h1>
+          <h2 className="text-2xl font-extrabold">Créer votre compte</h2>
           {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
           <Field label="Prénom" htmlFor="displayName">
             <Input id="displayName" name="displayName" autoComplete="given-name" required maxLength={80} />

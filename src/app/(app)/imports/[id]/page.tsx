@@ -52,7 +52,7 @@ export default async function ImportDetailPage({
     <Link
       key={label}
       href={`/imports/${id}${value ? `?classe=${value}` : ""}`}
-      className={`rounded-lg px-3 py-1.5 text-sm ${filter === value ? "bg-primary text-primary-fg" : "text-muted hover:text-text"}`}
+      className={`rounded-full px-3.5 py-1.5 text-sm font-semibold ${filter === value ? "bg-ink text-ink-fg" : "text-muted hover:text-text"}`}
     >
       {label}
     </Link>
@@ -64,7 +64,7 @@ export default async function ImportDetailPage({
         title={imp.filename}
         subtitle={`Importé le ${formatDateTime(imp.createdAt, user.timezone)} · ${imp.newEvents} nouvel(s) événement(s) sur ${imp.totalEvents}`}
       />
-      <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-border bg-surface p-1">
+      <div className="mb-4 flex flex-wrap gap-1 rounded-full border border-border bg-surface p-1 shadow-card">
         {tab(null, "Tous")}
         {tab("visit", "Visites probables")}
         {tab("unknown", "Indéterminés")}

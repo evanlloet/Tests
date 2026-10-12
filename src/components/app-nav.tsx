@@ -1,9 +1,10 @@
 "use client";
 
-import { BarChart3, CalendarDays, FileUp, GitCompareArrows, Home, Map, Route, Store, UserRound } from "lucide-react";
+import { BarChart3, CalendarDays, FileUp, GitCompareArrows, Home, Map, Route, Store, Trophy, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
+import { Buddy } from "./buddy";
 
 const PRIMARY = [
   { href: "/", label: "Aujourd'hui", icon: Home },
@@ -14,6 +15,7 @@ const PRIMARY = [
 ];
 
 const SECONDARY = [
+  { href: "/recompenses", label: "Récompenses", icon: Trophy, gamification: true },
   { href: "/tournees", label: "Tournées", icon: Route },
   { href: "/imports", label: "Imports Outlook", icon: FileUp },
   { href: "/rapprochements", label: "Rapprochements", icon: GitCompareArrows },
@@ -24,35 +26,38 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function SidebarNav({ pendingMatches, displayName }: { pendingMatches: number; displayName: string }) {
+export function SidebarNav({ pendingMatches, displayName, gamification, levelName }: { pendingMatches: number; displayName: string; gamification: boolean; levelName: string | null }) {
   const pathname = usePathname();
-  const item = (l: (typeof PRIMARY)[number], badge?: number) => (
+  const item = (l: { href: string; label: string; icon: typeof Home }, badge?: number) => (
     <Link
       key={l.href}
       href={l.href}
       aria-current={isActive(pathname, l.href) ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-        isActive(pathname, l.href) ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2 hover:text-text",
+        "flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors",
+        isActive(pathname, l.href) ? "bg-ink text-ink-fg" : "text-muted hover:bg-surface-2 hover:text-text",
       )}
     >
       <l.icon className="size-5" aria-hidden />
       <span className="flex-1">{l.label}</span>
-      {badge ? <span className="rounded-full bg-warning px-2 text-xs font-semibold text-surface">{badge}</span> : null}
+      {badge ? <span className="rounded-full bg-coral px-2 text-xs font-bold text-on-pastel">{badge}</span> : null}
     </Link>
   );
   return (
-    <nav aria-label="Navigation principale" className="flex h-full flex-col gap-1 p-3">
-      <Link href="/" className="mb-4 flex items-center gap-3 px-2 pt-2">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-fg">L</span>
+    <nav aria-label="Navigation principale" className="flex h-full flex-col gap-1 p-4">
+      <Link href="/" className="mb-5 flex items-center gap-3 px-1 pt-1">
+        <Buddy mood="joy" shape="flower" color="yellow" size={44} className="buddy-hover" />
         <span>
-          <span className="block font-semibold leading-tight">Léa</span>
-          <span className="block text-xs text-muted">Bonjour {displayName}</span>
+          <span className="block font-display text-xl leading-tight font-extrabold">Léa</span>
+          <span className="block text-xs text-muted">
+            Bonjour {displayName}
+            {gamification && levelName ? ` · ${levelName}` : ""}
+          </span>
         </span>
       </Link>
       {PRIMARY.map((l) => item(l))}
       <div className="my-3 border-t border-border" />
-      {SECONDARY.map((l) => item(l, l.href === "/rapprochements" ? pendingMatches : undefined))}
+      {SECONDARY.filter((l) => !("gamification" in l) || gamification).map((l) => item(l, l.href === "/rapprochements" ? pendingMatches : undefined))}
     </nav>
   );
 }
@@ -60,11 +65,8 @@ export function SidebarNav({ pendingMatches, displayName }: { pendingMatches: nu
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav
-      aria-label="Navigation principale"
-      className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur lg:hidden"
-    >
-      <ul className="mx-auto grid max-w-lg grid-cols-5">
+    <nav aria-label="Navigation principale" className="safe-bottom fixed inset-x-0 bottom-0 z-40 px-3 pb-2 lg:hidden">
+      <ul className="mx-auto grid max-w-lg grid-cols-5 rounded-[28px] border border-border/70 bg-surface/95 p-1.5 shadow-[0_8px_30px_rgb(23_19_43/0.12)] backdrop-blur">
         {PRIMARY.map((l) => {
           const active = isActive(pathname, l.href);
           return (
@@ -73,11 +75,11 @@ export function BottomNav() {
                 href={l.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium",
-                  active ? "text-primary" : "text-muted",
+                  "flex h-14 flex-col items-center justify-center gap-0.5 rounded-[22px] text-[11px] font-semibold transition-colors",
+                  active ? "bg-ink text-ink-fg" : "text-muted",
                 )}
               >
-                <l.icon className={cn("size-6", active && "stroke-[2.4]")} aria-hidden />
+                <l.icon className="size-5.5" aria-hidden />
                 {l.label}
               </Link>
             </li>

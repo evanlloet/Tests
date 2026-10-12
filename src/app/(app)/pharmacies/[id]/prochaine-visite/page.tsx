@@ -3,12 +3,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProposeSlotButton } from "@/components/propose-slot";
+import { Buddy } from "@/components/buddy";
+import { Confetti } from "@/components/confetti";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
+import { Card, CardBody, Tile } from "@/components/ui/card";
 import { EmptyState, Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { DueBadge } from "@/components/visit-status";
+import { POINTS } from "@/domain/gamification";
+import type { BuddyColor, BuddyShape, Mood } from "@/domain/mood";
 import { formatDayLong, formatHHmm } from "@/domain/time";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db/client";
@@ -16,6 +20,15 @@ import { getPharmacy } from "@/server/repositories/pharmacies";
 import { suggestNextVisit } from "@/server/services/suggestions";
 
 export const metadata: Metadata = { title: "Prochaine visite" };
+
+/** Un bonhomme par rang de proposition : la meilleure option est la plus radieuse. */
+const RANK_BUDDIES: { mood: Mood; shape: BuddyShape; color: BuddyColor }[] = [
+  { mood: "joy", shape: "flower", color: "yellow" },
+  { mood: "happy", shape: "circle", color: "green" },
+  { mood: "calm", shape: "squircle", color: "blue" },
+  { mood: "calm", shape: "blob", color: "purple" },
+  { mood: "meh", shape: "squircle", color: "orange" },
+];
 
 export default async function NextVisitPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
@@ -31,9 +44,21 @@ export default async function NextVisitPage({ params, searchParams }: { params: 
   return (
     <>
       {sp.terminee ? (
-        <Notice tone="success" title="Visite enregistrée comme réalisée" className="mb-4">
-          Voici les meilleurs créneaux pour la prochaine visite, calculés à partir de votre planning complet.
-        </Notice>
+        <>
+          <Confetti />
+          <Tile color="mint" className="mb-5 flex items-center gap-4 p-5">
+            <Buddy mood="joy" shape="flower" color="yellow" size={84} animate className="buddy-pop" />
+            <div>
+              <p className="font-display text-2xl font-extrabold">Visite clôturée, bravo !</p>
+              {user.gamificationEnabled ? (
+                <p className="mt-0.5 font-display text-lg font-bold">
+                  +{POINTS.visitDone + (sp.cr ? POINTS.report : 0)} points{sp.cr ? " (dont compte rendu)" : ""}
+                </p>
+              ) : null}
+              <p className="text-sm opacity-80">Voici les meilleurs créneaux pour la prochaine visite, calculés à partir de votre planning complet.</p>
+            </div>
+          </Tile>
+        </>
       ) : null}
       <PageHeader
         title={`Prochaine visite : ${p.name}`}
@@ -57,10 +82,12 @@ export default async function NextVisitPage({ params, searchParams }: { params: 
         <ol className="space-y-3">
           {result.suggestions.map((s, i) => (
             <li key={`${s.day}-${s.start}`}>
-              <Card>
+              <Card className={i === 0 ? "ring-2 ring-ink" : undefined}>
                 <CardBody className="space-y-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
+                    <div className="flex items-center gap-3">
+                      <Buddy {...RANK_BUDDIES[Math.min(i, RANK_BUDDIES.length - 1)]!} size={52} />
+                      <div>
                       <p className="text-xs font-medium text-primary">{i === 0 ? "Meilleure option" : `Option ${i + 1}`}</p>
                       <p className="text-lg font-semibold capitalize">{formatDayLong(s.day)}</p>
                       <p className="text-sm text-muted">
@@ -68,6 +95,7 @@ export default async function NextVisitPage({ params, searchParams }: { params: 
                         {s.detourKm !== null ? ` · détour estimé ${Math.round(s.detourKm)} km` : ""}
                         {s.offsetFromTarget !== 0 ? ` · ${s.offsetFromTarget > 0 ? "+" : ""}${s.offsetFromTarget} j / échéance` : " · le jour de l'échéance"}
                       </p>
+                      </div>
                     </div>
                     <Badge tone="neutral" title="Score de pertinence (plus haut = mieux)">
                       Score {Math.round(s.score)}

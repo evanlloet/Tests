@@ -65,7 +65,7 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
     createUserWithDefaults(tx, { email: parsed.data.email, passwordHash, displayName: parsed.data.displayName }),
   );
   await createSession(userId);
-  redirect("/profil?bienvenue=1");
+  redirect("/bienvenue");
 }
 
 export async function logoutAction(): Promise<void> {

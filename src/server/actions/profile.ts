@@ -214,3 +214,11 @@ export async function setThemeAction(formData: FormData): Promise<void> {
   }
   revalidatePath("/", "layout");
 }
+
+export async function setGamificationAction(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const enabled = formData.get("enabled") === "on";
+  await db.update(users).set({ gamificationEnabled: enabled }).where(eq(users.id, user.id));
+  await logAudit(db, { userId: user.id, entity: "user_settings", entityId: user.id, action: "gamification", after: { enabled } });
+  revalidatePath("/", "layout");
+}

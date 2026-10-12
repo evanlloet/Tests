@@ -68,6 +68,11 @@ export const users = pgTable(
     frequencyD: smallint("frequency_d").notNull().default(3),
     // Rapprochement automatique : score minimal pour valider sans revue manuelle
     autoMatchThreshold: real("auto_match_threshold").notNull().default(0.9),
+    // Parcours d'accueil (reprise à l'étape enregistrée)
+    onboardingStep: smallint("onboarding_step").notNull().default(0),
+    onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
+    // Récompenses symboliques (points, badges, défis) : facultatives, désactivables
+    gamificationEnabled: boolean("gamification_enabled").notNull().default(true),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

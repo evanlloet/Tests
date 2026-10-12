@@ -10,7 +10,7 @@ import { Notice } from "./ui/notice";
 export function DeleteAccountForm() {
   const [state, action, pending] = useActionState<AuthState, FormData>(deleteAccountAction, null);
   return (
-    <details className="rounded-xl border border-danger/30 p-3 text-sm">
+    <details className="rounded-2xl border border-danger/30 p-3 text-sm">
       <summary className="cursor-pointer font-medium text-danger">Supprimer mon compte et toutes mes données</summary>
       <form action={action} onSubmit={submitWithoutReset(action)} className="mt-3 space-y-3">
         <p className="text-muted">
