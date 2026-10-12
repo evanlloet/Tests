@@ -90,15 +90,17 @@ L'environnement de développement de cette V1 bloquait l'accès à `data.geopf.f
 
 ## Démarrage en local
 
-Prérequis : Node.js ≥ 22.12, PostgreSQL ≥ 15.
+Prérequis : Node.js ≥ 22.12 (version « LTS » sur nodejs.org) et PostgreSQL ≥ 15 (Mac : Postgres.app ; Windows :
+installeur officiel de postgresql.org, qui demande un mot de passe pour l'utilisateur `postgres`).
 
 ```bash
 npm install                      # copie aussi le worker MapLibre dans public/vendor
-cp .env.example .env             # puis renseigner DATABASE_URL
-createdb lea_dev                 # ou une base Supabase / Neon
-npm run db:migrate               # crée les 21 tables
-npm run dev                      # http://localhost:3000
+npm run setup                    # crée .env (demande l'utilisateur / mot de passe PostgreSQL), la base « lea » et les tables
+npm run dev                      # puis ouvrir http://localhost:3000
 ```
+
+`npm run setup` peut être relancé sans risque. Pour une base existante (Supabase, Neon…), copiez `.env.example`
+en `.env`, renseignez `DATABASE_URL`, puis `npm run setup` (ou `npm run db:migrate`).
 
 Créez ensuite le compte sur `/inscription` (avec `ALLOW_SIGNUP=true`), puis passez `ALLOW_SIGNUP=false`.
 Sans inscription ouverte : `npm run user:create -- adresse@exemple.fr Prénom` (mot de passe demandé).
