@@ -2,14 +2,16 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MapExplorer } from "@/components/map/map-explorer";
+import { pharmacyMoodSentence } from "@/components/mood-ui";
 import { Input } from "@/components/ui/form";
 import { PageHeader } from "@/components/ui/page-header";
 import { isApproximate } from "@/domain/client-data";
 import { hasLocation } from "@/domain/geo";
-import { formatDayLong, formatHHmm, isDayKey } from "@/domain/time";
+import { formatDayLong, formatDayShort, formatHHmm, isDayKey } from "@/domain/time";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db/client";
 import { favoritePlaces, travelPreferences } from "@/server/db/schema";
+import { listTerritories } from "@/server/repositories/territories";
 import { todayFor } from "@/server/services/context";
 import { getPharmacyOverview } from "@/server/services/pharmacy-overview";
 import { getPlanning } from "@/server/services/planning";
@@ -20,12 +22,14 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
   const user = await requireUser();
   const sp = await searchParams;
   const day = sp.date && isDayKey(sp.date) ? sp.date : todayFor(user);
-  const [overview, planning, places, travelRows] = await Promise.all([
+  const [overview, planning, places, travelRows, territories] = await Promise.all([
     getPharmacyOverview(user),
     getPlanning(db, user, day, day),
     db.select().from(favoritePlaces).where(and(eq(favoritePlaces.userId, user.id), isNotNull(favoritePlaces.lat))),
     db.select().from(travelPreferences).where(eq(travelPreferences.userId, user.id)),
+    listTerritories(db, user.id),
   ]);
+  const sectors = territories.filter((t) => t.kind === "department" && t.isActive).map((t) => ({ code: t.code, name: t.name, color: t.color }));
   const travel = travelRows[0];
   const home = travel && hasLocation({ lat: travel.homeLat, lng: travel.homeLng }) ? { lat: travel.homeLat!, lng: travel.homeLng! } : null;
   const stops = planning[0]!.appointments
@@ -43,6 +47,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
       sectorColor: i.territory?.color ?? null,
       due: i.status.dueState,
       approx: isApproximate(i.pharmacy),
+      note: pharmacyMoodSentence(i.status, formatDayShort),
     }));
   const missing = overview.length - pharmacies.length;
   const approximate = pharmacies.filter((p) => p.approx).length;
@@ -77,10 +82,11 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
         home={home}
         line={null}
         lineIsEstimate
+        sectors={sectors}
       />
       <p className="mt-3 text-xs text-muted">
-        Couleur des points : catégorie (A vert, B bleu, C ambre, D magenta, gris si inconnue). La navigation détaillée s&apos;ouvre dans votre application GPS depuis la fiche
-        ou l&apos;écran Aujourd&apos;hui.
+        Touchez un bonhomme pour ouvrir sa carte ; une bulle regroupe plusieurs pharmacies (pastille rouge : en retard). L&apos;itinéraire
+        détaillé s&apos;ouvre dans votre application GPS.
       </p>
     </>
   );

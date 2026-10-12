@@ -264,12 +264,22 @@ h2,
 }
 
 /* MapLibre : contrôles lisibles en mode sombre */
+/* La carte reste claire quel que soit le thème : contrôles blancs (icônes MapLibre sombres) */
 .maplibregl-ctrl-group {
-  background: var(--surface) !important;
+  background: #ffffff !important;
   border-radius: 14px !important;
+  box-shadow: 0 4px 14px rgb(23 19 43 / 0.14) !important;
 }
 .maplibregl-ctrl-group button + button {
-  border-top-color: var(--border) !important;
+  border-top-color: #ece7f5 !important;
+}
+.maplibregl-ctrl-scale {
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.85) !important;
+}
+/* Noms des secteurs : visibles en vue d'ensemble, masqués quand on zoome */
+[data-zoomed="true"] .lea-sector-label {
+  display: none;
 }
 .maplibregl-popup-content {
   background: var(--surface) !important;

@@ -23,6 +23,13 @@ sans validation.
 | 7. Fréquences ABCD modifiables (globalement et par pharmacie) | ✅ | `/profil`, fiche |
 | 8. Secteurs par jour : modèle principal + variante Orne/Mayenne, activables par semaine | ✅ | `/profil`, `/planning` |
 | 9. Carte interactive des pharmacies et des rendez-vous (liste synchronisée) | ✅ | `/carte` |
+
+**Carte** : pharmacies en bonshommes colorés selon l'échéance (ou par catégorie), regroupées en bulles avec le nombre de
+pharmacies en retard ; pile pour les pharmacies au même endroit (centre de commune) ; secteurs suivis teintés à leurs
+couleurs ; tournée du jour numérotée avec les heures ; carte de la pharmacie choisie (fiche, planifier, itinéraire) ;
+filtres (à visiter, en retard, catégories, recherche) ; plein écran, position actuelle, échelle, légende. Le fond Plan IGN est
+adouci aux couleurs de l'application ; hors connexion, le fond simplifié des départements prend le relais
+(`scripts/build-departements.mjs`).
 | 10. Simulation de tournée : ordre actuel vs ordre optimisé, avec explications | ✅ | `/tournees` |
 
 Également livré :
@@ -79,7 +86,7 @@ changements importants, données intactes après déconnexion / reconnexion.
 | PostgreSQL | ✅ vérifié | Testé sur PostgreSQL 16 (tests d'intégration et parcours complet). Compatible Supabase. |
 | Calcul d'itinéraires (OSRM) | ⚠️ **codé, non vérifié** | Activé si `OSRM_URL` est renseigné. Sans moteur, Léa affiche une **estimation à vol d'oiseau clairement signalée** (jamais présentée comme un itinéraire). En cas d'échec d'OSRM, repli sur l'estimation avec un message. |
 | Géocodage Géoplateforme IGN | ⚠️ **codé, non vérifié** | Utilisé à la demande (bouton « Géolocaliser »). Un résultat peu sûr est ignoré : la fiche reste sans coordonnées. |
-| Fond de carte Plan IGN | ⚠️ **non vérifié** | MapLibre fonctionne (points, tournée, sélection) ; le fond de carte n'a pas pu être chargé dans l'environnement de développement (réseau restreint). Un message s'affiche si les tuiles sont injoignables. |
+| Fond de carte Plan IGN | ⚠️ **non vérifié** | MapLibre fonctionne (bonshommes, bulles, tournée, sélection) ; les tuiles IGN n'ont pas pu être chargées dans l'environnement de développement (réseau restreint). Sans elles, un fond simplifié livré avec l'application (contours des départements, `public/geo/departements-ouest.geojson`) reste affiché, avec un message. |
 | Microsoft Graph (Outlook) | ❌ non disponible | Import de fichiers ICS / CSV uniquement. L'architecture d'import est prête à recevoir une synchronisation. |
 | Assistant conversationnel (§ 11) | ❌ hors V1 | Non demandé dans la liste de la V1. Les calculs sont déjà des services déterministes réutilisables. |
 

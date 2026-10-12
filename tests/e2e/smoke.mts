@@ -179,8 +179,14 @@ await shot("10-tournee");
 
 // 9. Carte
 await page.goto(`${BASE}/carte${tourDate ? `?date=${tourDate}` : ""}`);
-await page.waitForTimeout(3500);
+await page.locator(".lea-marker").first().waitFor({ timeout: 20000 });
+await page.waitForTimeout(1500);
 await shot("11-carte");
+await page.getByRole("button", { name: "Toutes", exact: true }).click();
+await page.locator("section:has(h2:text-matches('^Pharmacies')) li button").first().click();
+await page.getByRole("link", { name: "Voir la fiche" }).waitFor();
+log("carte :", await page.locator(".lea-marker").count(), "marqueurs (bonshommes et bulles), carte de pharmacie affichée");
+await shot("11b-carte-selection");
 
 // 10. Pilotage
 await page.goto(`${BASE}/pilotage`);
