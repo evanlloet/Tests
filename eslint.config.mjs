@@ -5,7 +5,14 @@ const config = [
   ...nextVitals,
   ...nextTs,
   {
-    ignores: [".next/**", "node_modules/**", "drizzle/**", "next-env.d.ts"],
+    rules: {
+      // Interface en français : les apostrophes sont omniprésentes et sans risque en JSX.
+      "react/no-unescaped-entities": "off",
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" }],
+    },
+  },
+  {
+    ignores: [".next/**", "node_modules/**", "drizzle/**", "public/vendor/**", "next-env.d.ts"],
   },
 ];
 

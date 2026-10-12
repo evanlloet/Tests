@@ -220,6 +220,8 @@ CREATE TABLE "route_stops" (
 	"lat" double precision,
 	"lng" double precision,
 	"arrival_at" timestamp with time zone,
+	"visit_start_at" timestamp with time zone,
+	"visit_end_at" timestamp with time zone,
 	"departure_at" timestamp with time zone,
 	"leg_distance_km" real,
 	"leg_drive_minutes" real,

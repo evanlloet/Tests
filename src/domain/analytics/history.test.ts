@@ -65,3 +65,18 @@ describe("analyse de l'historique", () => {
     expect(a.clusters[0]!.sharedDays).toBe(3);
   });
 });
+
+describe("regroupements", () => {
+  it("n'enchaîne pas A–B et B–C en un groupe A–B–C sans lien entre A et C", () => {
+    const visits: HistoricalVisit[] = [];
+    for (const day of ["2026-01-05", "2026-02-02", "2026-03-02", "2026-04-06"]) {
+      visits.push(v(day, "09:00", "a", "14", PLACES.caen), v(day, "11:00", "b", "14", PLACES.bayeux));
+    }
+    for (const day of ["2026-05-04", "2026-06-01", "2026-07-06"]) {
+      visits.push(v(day, "09:00", "b", "14", PLACES.bayeux), v(day, "11:00", "c", "14", PLACES.lisieux));
+    }
+    const a = analyzeHistory({ visits, tz: "Europe/Paris", home: null, hotelThresholdKm: 150, estimate: DEFAULT_ESTIMATE });
+    // Le lien le plus fort (A–B) forme le groupe ; C n'y entre pas faute de lien avec A
+    expect(a.clusters.map((c) => c.pharmacies.map((p) => p.id))).toEqual([["a", "b"]]);
+  });
+});

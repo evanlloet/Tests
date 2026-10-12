@@ -74,3 +74,35 @@ describe("rapprochement agenda ↔ pharmacies", () => {
     expect(scoreCandidates(event, index, { useDescription: true })[0]!.pharmacyId).toBe("port");
   });
 });
+
+describe("contexte de la journée et commune seule", () => {
+  it("propose les pharmacies d'une commune quand seul son nom est indiqué", () => {
+    const c = top("Ph. Honfleur");
+    expect(c[0]!.pharmacyId).toBe("port");
+    expect(c[0]!.reasons.join(" ")).toMatch(/Seule la commune/);
+    expect(decideMatch(c, 0.9).status).toBe("pending");
+  });
+
+  it("départage deux homonymes grâce au secteur des autres rendez-vous du jour", async () => {
+    const { applyDayContext, isAmbiguous } = await import("./matching");
+    const homonyms = buildMatchIndex([ph("morel-caen", "Pharmacie Morel", "Caen", "14000"), ph("morel-aigle", "Pharmacie Morel", "L'Aigle", "61300")]);
+    const c = scoreCandidates({ title: "RDV Pharmacie Morel", location: null }, homonyms);
+    expect(isAmbiguous(c)).toBe(true);
+    const geo = new Map([
+      ["morel-caen", { departmentCode: "14", location: { lat: 49.18, lng: -0.37 } }],
+      ["morel-aigle", { departmentCode: "61", location: { lat: 48.76, lng: 0.63 } }],
+    ]);
+    const ctx = { departments: new Map([["14", 3]]), points: [{ lat: 49.28, lng: -0.7 }] };
+    const adjusted = applyDayContext(c, ctx, geo, (code) => (code === "14" ? "Calvados" : code));
+    expect(adjusted[0]!.pharmacyId).toBe("morel-caen");
+    expect(adjusted[0]!.reasons.join(" ")).toMatch(/Même secteur \(Calvados\)/);
+    expect(isAmbiguous(adjusted)).toBe(false);
+    expect(decideMatch(adjusted, 0.9).status).toBe("auto_validated");
+  });
+
+  it("ne modifie rien sans contexte", async () => {
+    const { applyDayContext } = await import("./matching");
+    const c = top("Pharmacie Lemoine");
+    expect(applyDayContext(c, undefined, new Map())).toEqual(c);
+  });
+});

@@ -168,7 +168,9 @@ export function analyzeHistory(input: {
     mileage = { totalKm, avgKmPerDay: measured ? totalKm / measured : 0, daysMeasured: measured, daysSkipped: skipped };
   }
 
-  // Regroupements : paires de pharmacies visitées le même jour au moins N fois
+  // Regroupements : paires visitées ensemble au moins N fois, sur au moins la moitié des
+  // journées de la moins visitée des deux ; agrégation « complète » (chaque membre est
+  // fortement lié à tous les autres) pour éviter les chaînes A–B–C sans lien A–C.
   const minShared = input.clusterMinSharedDays ?? 3;
   const pairCounts = new Map<string, number>();
   for (const d of days) {
@@ -180,40 +182,42 @@ export function analyzeHistory(input: {
       }
     }
   }
-  const parent = new Map<string, string>();
-  const find = (x: string): string => {
-    let r = x;
-    while (parent.get(r) !== r) r = parent.get(r)!;
-    parent.set(x, r);
-    return r;
+  const daysOf = (id: string) => perPharmacyMap.get(id)?.days.length ?? 0;
+  const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+  const strength = (a: string, b: string) => {
+    const n = pairCounts.get(pairKey(a, b)) ?? 0;
+    return n >= minShared ? n / Math.max(1, Math.min(daysOf(a), daysOf(b))) : 0;
   };
-  const strongPairs = [...pairCounts.entries()].filter(([, n]) => n >= minShared);
-  for (const [key] of strongPairs) {
-    const [a, b] = key.split("|") as [string, string];
-    if (!parent.has(a)) parent.set(a, a);
-    if (!parent.has(b)) parent.set(b, b);
-    parent.set(find(a), find(b));
+  const strongPairs = [...pairCounts.keys()]
+    .map((key) => {
+      const [a, b] = key.split("|") as [string, string];
+      return { a, b, s: strength(a, b), n: pairCounts.get(key)! };
+    })
+    .filter((p) => p.s >= 0.5)
+    .sort((x, y) => y.s - x.s || y.n - x.n);
+  const clusterOf = new Map<string, Set<string>>();
+  for (const { a, b } of strongPairs) {
+    const ca = clusterOf.get(a) ?? new Set([a]);
+    const cb = clusterOf.get(b) ?? new Set([b]);
+    if (ca === cb) continue;
+    const cohesive = [...ca].every((x) => [...cb].every((y) => strength(x, y) >= 0.5));
+    if (!cohesive) continue;
+    const merged = new Set([...ca, ...cb]);
+    for (const id of merged) clusterOf.set(id, merged);
   }
-  const groups = new Map<string, Set<string>>();
-  for (const id of parent.keys()) {
-    const root = find(id);
-    const g = groups.get(root) ?? new Set<string>();
-    g.add(id);
-    groups.set(root, g);
-  }
-  const clusters = [...groups.values()]
-    .map((ids) => {
-      const members = [...ids];
-      const shared = Math.max(
-        ...strongPairs.filter(([k]) => members.some((m) => k.startsWith(`${m}|`))).map(([, n]) => n),
-      );
-      const first = perPharmacyMap.get(members[0]!);
+  const clusters = [...new Set(clusterOf.values())]
+    .filter((g) => g.size >= 2)
+    .map((g) => {
+      const members = [...g];
+      let shared = 0;
+      for (let i = 0; i < members.length; i++)
+        for (let j = i + 1; j < members.length; j++) shared = Math.max(shared, pairCounts.get(pairKey(members[i]!, members[j]!)) ?? 0);
       return {
         pharmacies: members
           .map((id) => ({ id, name: perPharmacyMap.get(id)?.name ?? id }))
           .sort((a, b) => a.name.localeCompare(b.name, "fr")),
         sharedDays: shared,
-        departmentCode: first?.dept ?? null,
+        departmentCode: perPharmacyMap.get(members[0]!)?.dept ?? null,
       };
     })
     .sort((a, b) => b.sharedDays - a.sharedDays || b.pharmacies.length - a.pharmacies.length)

@@ -114,15 +114,18 @@ export function pharmacyDedupeKey(name: string, postalCode: string | null | unde
 /** Similarité par trigrammes (0–1), tolérante aux fautes de frappe. */
 export function trigramSimilarity(a: string, b: string): number {
   if (a === b) return 1;
-  const ta = trigrams(a);
-  const tb = trigrams(b);
+  return setSimilarity(trigrams(a), trigrams(b));
+}
+
+/** Indice de Jaccard entre deux ensembles de trigrammes pré-calculés. */
+export function setSimilarity(ta: Set<string>, tb: Set<string>): number {
   if (ta.size === 0 || tb.size === 0) return 0;
   let inter = 0;
   for (const t of ta) if (tb.has(t)) inter++;
   return inter / (ta.size + tb.size - inter);
 }
 
-function trigrams(s: string): Set<string> {
+export function trigrams(s: string): Set<string> {
   const padded = `  ${s} `;
   const out = new Set<string>();
   for (let i = 0; i < padded.length - 2; i++) out.add(padded.slice(i, i + 3));

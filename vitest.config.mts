@@ -16,6 +16,11 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
     // Les tests d'intégration partagent une base PostgreSQL : pas de parallélisme entre fichiers.
     fileParallelism: false,
-    env: { TZ: "UTC" },
+    env: {
+      TZ: "UTC",
+      // Les services utilisent le client partagé : il pointe sur la base de test.
+      DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://lea:lea@localhost:5432/lea_test",
+      OSRM_URL: "",
+    },
   },
 });

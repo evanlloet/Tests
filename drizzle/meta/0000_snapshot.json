@@ -1,5 +1,5 @@
 {
-  "id": "9daebc47-1b17-41fe-b469-14ab3747acf4",
+  "id": "be55b53c-328a-4a1e-a48c-0ac5984086ba",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1861,6 +1861,18 @@
         },
         "arrival_at": {
           "name": "arrival_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visit_start_at": {
+          "name": "visit_start_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visit_end_at": {
+          "name": "visit_end_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

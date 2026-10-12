@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+/*
+ * Thème Léa : tons chauds et apaisants. Les couleurs sont des jetons CSS
+ * redéfinis en mode sombre (préférence système ou choix dans le profil).
+ */
+:root {
+  --bg: #f7f4ef;
+  --surface: #ffffff;
+  --surface-2: #f1ece4;
+  --border: #e3dbcf;
+  --text: #2a2420;
+  --muted: #6f655c;
+  --primary: #c4502f;
+  --primary-hover: #a9431f;
+  --primary-soft: #fbe6dc;
+  --primary-fg: #ffffff;
+  --accent: #1f6f68;
+  --accent-soft: #dcefec;
+  --success: #2f7d4f;
+  --success-soft: #e0f1e6;
+  --warning: #a8620b;
+  --warning-soft: #fbedd3;
+  --danger: #b42318;
+  --danger-soft: #fde4e1;
+  --info: #3756a8;
+  --info-soft: #e2e8f8;
+  --focus: #c4502f;
+  --shadow: 0 1px 2px rgb(42 36 32 / 0.06), 0 4px 12px rgb(42 36 32 / 0.05);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171412;
+    --surface: #221e1b;
+    --surface-2: #2b2622;
+    --border: #3a332d;
+    --text: #f2ece5;
+    --muted: #b3a89c;
+    --primary: #e8774f;
+    --primary-hover: #f08d68;
+    --primary-soft: #3d2419;
+    --primary-fg: #1b120d;
+    --accent: #5cc0b5;
+    --accent-soft: #173431;
+    --success: #6fcf97;
+    --success-soft: #16301f;
+    --warning: #f0b45a;
+    --warning-soft: #362711;
+    --danger: #f28b82;
+    --danger-soft: #3b1714;
+    --info: #9db4f0;
+    --info-soft: #1c2440;
+    --focus: #e8774f;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #171412;
+  --surface: #221e1b;
+  --surface-2: #2b2622;
+  --border: #3a332d;
+  --text: #f2ece5;
+  --muted: #b3a89c;
+  --primary: #e8774f;
+  --primary-hover: #f08d68;
+  --primary-soft: #3d2419;
+  --primary-fg: #1b120d;
+  --accent: #5cc0b5;
+  --accent-soft: #173431;
+  --success: #6fcf97;
+  --success-soft: #16301f;
+  --warning: #f0b45a;
+  --warning-soft: #362711;
+  --danger: #f28b82;
+  --danger-soft: #3b1714;
+  --info: #9db4f0;
+  --info-soft: #1c2440;
+  --focus: #e8774f;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-fg: var(--primary-fg);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --shadow-card: var(--shadow);
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Barre de navigation inférieure : respecte la zone sûre des téléphones */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* MapLibre : contrôles lisibles en mode sombre */
+.maplibregl-ctrl-group {
+  background: var(--surface) !important;
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--border) !important;
+}
+.maplibregl-popup-content {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow) !important;
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--surface) !important;
+  border-bottom-color: var(--surface) !important;
+}
+
+/* Les éléments de grille peuvent rétrécir (évite les débordements sur mobile avec du texte tronqué) */
+@layer base {
+  .grid > * {
+    min-width: 0;
+  }
+}

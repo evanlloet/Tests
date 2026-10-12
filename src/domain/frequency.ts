@@ -69,24 +69,38 @@ export type VisitStatus = {
 export const DUE_SOON_DAYS = 21;
 export const PLANNED_TOLERANCE_DAYS = 14;
 
-export function computeVisitStatus(input: { perYear: number | null; visits: VisitRecord[]; today: DayKey }): VisitStatus {
-  const { perYear, today } = input;
-  const interval = perYear ? intervalDays(perYear) : null;
+export type VisitSummary = {
+  lastVisit: VisitRecord | null;
+  nextPlanned: DayKey | null;
+  year: { done: number; identified: number; planned: number };
+};
 
-  const past = input.visits
-    .filter((v) => v.state !== "planned" && v.day <= today)
-    .sort((a, b) => a.day.localeCompare(b.day));
-  const future = input.visits
-    .filter((v) => v.state === "planned" && v.day >= today)
-    .sort((a, b) => a.day.localeCompare(b.day));
-
-  const lastVisit = past.at(-1) ?? null;
-  const nextPlanned = future[0]?.day ?? null;
+/** Résume une liste de visites (passées et futures) à la date du jour. */
+export function summarizeVisits(visits: VisitRecord[], today: DayKey): VisitSummary {
+  const past = visits.filter((v) => v.state !== "planned" && v.day <= today).sort((a, b) => a.day.localeCompare(b.day));
+  const future = visits.filter((v) => v.state === "planned" && v.day >= today).sort((a, b) => a.day.localeCompare(b.day));
   const year = today.slice(0, 4);
   const inYear = (v: VisitRecord) => v.day.startsWith(year);
-  const done = past.filter((v) => v.state === "done" && inYear(v)).length;
-  const identified = past.filter((v) => v.state === "identified" && inYear(v)).length;
-  const planned = future.filter(inYear).length;
+  return {
+    lastVisit: past.at(-1) ?? null,
+    nextPlanned: future[0]?.day ?? null,
+    year: {
+      done: past.filter((v) => v.state === "done" && inYear(v)).length,
+      identified: past.filter((v) => v.state === "identified" && inYear(v)).length,
+      planned: future.filter(inYear).length,
+    },
+  };
+}
+
+export function computeVisitStatus(input: { perYear: number | null; visits: VisitRecord[]; today: DayKey }): VisitStatus {
+  return computeVisitStatusFromSummary({ perYear: input.perYear, today: input.today, summary: summarizeVisits(input.visits, input.today) });
+}
+
+/** Variante utilisée avec des agrégats SQL (une ligne par pharmacie). */
+export function computeVisitStatusFromSummary(input: { perYear: number | null; summary: VisitSummary; today: DayKey }): VisitStatus {
+  const { perYear, today } = input;
+  const { lastVisit, nextPlanned, year } = input.summary;
+  const interval = perYear ? intervalDays(perYear) : null;
 
   let nextDue: DayKey | null = null;
   let dueState: DueState = "unknown";
@@ -112,14 +126,21 @@ export function computeVisitStatus(input: { perYear: number | null; visits: Visi
     dueState,
     plannedLate,
     year: {
-      done,
-      identified,
-      planned,
+      ...year,
       target: perYear,
-      remaining: perYear === null ? null : Math.max(0, perYear - done - identified - planned),
+      remaining: perYear === null ? null : Math.max(0, perYear - year.done - year.identified - year.planned),
     },
   };
 }
+
+export const DUE_STATE_LABELS: Record<DueState, string> = {
+  unknown: "Fréquence non définie",
+  never_visited: "Aucune visite connue",
+  overdue: "En retard",
+  due_soon: "À prévoir bientôt",
+  ok: "À jour",
+  planned: "Planifiée",
+};
 
 /** Priorité commerciale d'une catégorie (utilisée pour départager les propositions). */
 export function categoryWeight(category: Category | null | undefined): number {

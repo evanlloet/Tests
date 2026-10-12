@@ -469,6 +469,9 @@ export const routeStops = pgTable(
     lat: doublePrecision("lat"),
     lng: doublePrecision("lng"),
     arrivalAt: timestamp("arrival_at", { withTimezone: true }),
+    /** Début et fin de visite prévus (peuvent suivre l'arrivée d'une attente ou d'une pause) */
+    visitStartAt: timestamp("visit_start_at", { withTimezone: true }),
+    visitEndAt: timestamp("visit_end_at", { withTimezone: true }),
     departureAt: timestamp("departure_at", { withTimezone: true }),
     legDistanceKm: real("leg_distance_km"),
     legDriveMinutes: real("leg_drive_minutes"),

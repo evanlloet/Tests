@@ -7,6 +7,9 @@
     "node": ">=22.12"
   },
   "scripts": {
+    "postinstall": "node scripts/copy-maplibre-worker.mjs",
+    "predev": "node scripts/copy-maplibre-worker.mjs",
+    "prebuild": "node scripts/copy-maplibre-worker.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -17,7 +20,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "user:create": "tsx scripts/create-user.ts"
+    "user:create": "tsx --conditions=react-server scripts/create-user.ts",
+    "test:e2e": "tsx tests/e2e/smoke.mts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

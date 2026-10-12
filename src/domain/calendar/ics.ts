@@ -198,8 +198,10 @@ function dayKeyFromIcal(t: IcalTime): string {
 }
 
 function tzidOf(t: IcalTime): string | undefined {
+  // `timezone` (TZID brut) existe à l'exécution mais n'est pas déclaré dans les types d'ical.js
+  const raw = (t as unknown as { timezone?: string }).timezone;
   const zone = t.zone as { tzid?: string } | undefined;
-  return t.timezone || zone?.tzid || undefined;
+  return raw || zone?.tzid || undefined;
 }
 
 export function resolveIanaTimezone(tzid: string): string | null {
