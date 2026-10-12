@@ -12,15 +12,15 @@ import { requireUser } from "../auth/session";
 import { db } from "../db/client";
 import { pharmacies, pharmacyMetrics, pharmacyPreferences } from "../db/schema";
 import { logAudit } from "../repositories/audit";
-import { importPharmacyCsv, type PharmacyImportResult } from "../services/pharmacy-import";
+import { importPharmacyFile, type PharmacyImportResult } from "../services/pharmacy-import";
 import { readUpload, toActionError, type ActionResult } from "./result";
 
 export async function importPharmaciesAction(_prev: ActionResult<PharmacyImportResult> | null, formData: FormData): Promise<ActionResult<PharmacyImportResult>> {
   const user = await requireUser();
-  const file = await readUpload(formData.get("file"), [".csv", ".txt"]);
+  const file = await readUpload(formData.get("file"), [".csv", ".txt", ".xlsx"]);
   if (typeof file === "string") return { ok: false, error: file };
   try {
-    const result = await importPharmacyCsv(db, user.id, file);
+    const result = await importPharmacyFile(db, user.id, file);
     revalidatePath("/pharmacies");
     return { ok: true, data: result };
   } catch (err) {
@@ -52,6 +52,11 @@ const identitySchema = z.object({
     .pipe(z.string().regex(/^\d{5}$/, "Code postal à 5 chiffres.").nullable()),
   city: optionalText(120),
   phone: optionalText(40),
+  // Une ou plusieurs adresses séparées par « ; » (comme dans certains fichiers clients)
+  email: optionalText(200).refine(
+    (v) => v === null || v.split(/[;,\s]+/).filter(Boolean).every((e) => z.email().safeParse(e).success),
+    "Adresse e-mail invalide.",
+  ),
   externalId: optionalText(40),
   notes: optionalText(4000),
   lat: optionalNumber,
@@ -67,6 +72,7 @@ function readIdentity(formData: FormData) {
     postalCode: get("postalCode"),
     city: get("city"),
     phone: get("phone"),
+    email: get("email"),
     externalId: get("externalId"),
     notes: get("notes"),
     lat: get("lat"),

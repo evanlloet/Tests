@@ -5,7 +5,7 @@ import type { SessionUser } from "@/server/auth/session";
 import { db } from "@/server/db/client";
 import { appointments, auditLogs, pharmacies, travelPreferences, users } from "@/server/db/schema";
 import { AppointmentError, completeVisit, createAppointment, updateAppointment } from "@/server/services/appointments";
-import { importPharmacyCsv } from "@/server/services/pharmacy-import";
+import { importPharmacyFile } from "@/server/services/pharmacy-import";
 import { getPharmacyOverview } from "@/server/services/pharmacy-overview";
 import { getRewards } from "@/server/services/rewards";
 import { applyRoutePlan, RoutePlanError, simulateDayPlan } from "@/server/services/route-plan";
@@ -41,7 +41,7 @@ describe("services métier (base réelle)", () => {
 
   async function setup() {
     const t = await createTestUser();
-    await importPharmacyCsv(db, t.id, { name: "p.csv", bytes: bytes(CSV) });
+    await importPharmacyFile(db, t.id, { name: "p.csv", bytes: bytes(CSV) });
     await db.update(travelPreferences).set({ homeLat: 48.1173, homeLng: -1.6778 }).where(eq(travelPreferences.userId, t.id));
     const user = await sessionUser(t.id);
     const ph = Object.fromEntries((await db.select().from(pharmacies)).map((p) => [p.city!, p.id]));

@@ -17,7 +17,7 @@ sans validation.
 | 1. Accueil : rendez-vous du jour, prochaines actions, grand bouton « Rendez-vous terminé » | ✅ | `/` |
 | 2. Calendrier jour / semaine / mois, création, modification, glisser-déposer | ✅ | `/planning` |
 | 3. Référentiel : recherche, filtres (secteur, catégorie, échéance), fiches | ✅ | `/pharmacies` |
-| 4. Import CSV des pharmacies (rejouable, sans doublons) | ✅ | `/pharmacies/import` |
+| 4. Import des pharmacies : fichier clients Excel ou CSV (rejouable, sans doublons) | ✅ | `/pharmacies/import` |
 | 5. Import calendrier ICS / CSV Outlook : prévisualisation, normalisation, doublons | ✅ | `/imports` |
 | 6. Rapprochement rendez-vous ↔ pharmacies, validation manuelle des cas incertains | ✅ | `/rapprochements` |
 | 7. Fréquences ABCD modifiables (globalement et par pharmacie) | ✅ | `/profil`, fiche |
@@ -130,7 +130,8 @@ Aucun secret n'est envoyé au navigateur. Les clés éventuelles (OSRM privé, e
 
 1. **Accueil pas à pas** (proposé à l'inscription) : domicile, secteurs, semaine type, rythme, fréquences ABCD. Tout
    reste modifiable ensuite dans le **Profil**.
-2. **Pharmacies › Importer un CSV** : le fichier de la commerciale ou une extraction FINESS retravaillée.
+2. **Pharmacies › Importer un fichier** : le fichier clients Excel du laboratoire (voir ci-dessous), un CSV ou une
+   extraction FINESS retravaillée.
 3. **Imports Outlook** : exporter ~2 ans de calendrier en `.ics` (recommandé) ou `.csv`, prévisualiser, confirmer.
 4. **Rapprochements** : valider, corriger (« Choisir une autre pharmacie ») ou ignorer les cas incertains.
 5. **Pilotage** : vérifier l'historique reconstruit (secteurs par jour, fréquences, journées lointaines).
@@ -146,9 +147,43 @@ Nom;Adresse;Code postal;Ville;FINESS;Latitude;Longitude;Catégorie;CA;Potentiel;
 Pharmacie Exemple;1 rue de la Gare;14000;Caen;140000000;49,18;-0,37;A;1250000;fort;
 ```
 
-Seul le nom est obligatoire. Identification d'une pharmacie existante : identifiant externe (FINESS…), sinon
-nom + code postal + commune. Une valeur vide n'efface jamais une valeur existante ; une valeur illisible est
-ignorée et signalée.
+Seul le nom est obligatoire. Identification d'une pharmacie existante : identifiant externe (code client,
+FINESS…), sinon nom + code postal + commune. Une valeur vide (ou « - ») n'efface jamais une valeur existante ; une
+valeur illisible est ignorée et signalée.
+
+### Fichier clients Excel (export « CLIENTS » du laboratoire)
+
+Le classeur `.xlsx` s'importe tel quel (première feuille remplie, lecture maison du format Office Open XML avec
+`fflate`, sans dépendance lourde). Correspondance des colonnes :
+
+| Colonne du fichier | Dans Léa |
+|---|---|
+| Code | Code client (identifiant de réimport) |
+| Lib Sous-Canal Client | Canal : « Pharmacie » ou « GMS » (pastille sur la fiche, filtre) |
+| Nom Client | Nom affiché sous une forme lisible (« SELARL GDE PHIE DU MOULIN » → « Grande Pharmacie du Moulin ») ; la raison sociale d'origine est conservée |
+| Code Postal, Ville | Code postal, commune, département |
+| N° Tel, Adresse Mail | Téléphone (lien d'appel), e-mail (lien `mailto:`) |
+| Code UGA 746 Tiers Cde | Zone commerciale (filtre) ; un code postal éloigné du département de la zone est signalé |
+| Lib Groupement Client | Groupement (recherche) |
+| Ciblage Client Oral Care | Catégorie A/B/C/D → fréquence de visite |
+| Ciblage Premium / Perfect Store / TLV / GC | Ciblages (pastilles, filtre) ; une valeur qui n'est pas l'initiale est gardée telle quelle (« GC (R) ») |
+| Date de dernière Commande | Dernière commande (jamais comptée comme une visite) |
+| Date de prochaine visite | Visite prévue au fichier (affichée, comparée aux rendez-vous ; aucun rendez-vous créé automatiquement) |
+| CAf CFaj A-1, CAf A | CA A-1 et CA A |
+| Evol A/A-1 | Recalculée par Léa à partir des deux CA |
+| Nom Agent Oral Care, KAM régional, autres | Conservées telles quelles dans « Autres informations » (fiche › Provenance) |
+
+Le fichier ne contient pas d'adresse : chaque fiche est placée **au centre de sa commune** (position marquée
+approximative, points atténués sur la carte), ce qui suffit pour estimer les trajets entre communes. La référence
+des communes (`src/data/communes-ouest.json`, 12 départements : les 5 suivis et leurs voisins) est générée par
+`scripts/build-communes.mjs` à partir de sources ouvertes (INSEE / Etalab pour noms et codes postaux, IGN Admin
+Express 2018 pour les centres) ; elle reconnaît les communes déléguées (« Tourlaville ») et les anciens noms
+(« Le Hom », « Saline »). Une commune introuvable (ex. code postal incohérent) est signalée, jamais devinée. Une
+position précise (saisie, géocodage) n'est jamais remplacée par un centre de commune. Le géocodage à l'adresse
+reste disponible sur chaque fiche.
+
+Le fichier de test `tests/fixtures/clients-exemple.xlsx` reproduit ce format avec des **données fictives**
+(généré par `tests/fixtures/make-clients-xlsx.py`) ; aucun fichier client réel n'est versionné.
 
 ---
 
@@ -239,15 +274,15 @@ Les 16 tables du brief (`users`, `pharmacies`, `pharmacy_metrics`, `pharmacy_pre
 
 ```bash
 npm run typecheck && npm run lint
-npm test                 # 112 tests unitaires et d'intégration (PostgreSQL requis : base lea_test)
+npm test                 # 143 tests unitaires et d'intégration (PostgreSQL requis : base lea_test)
 npm run test:e2e         # parcours complet dans Chromium (application démarrée ; CHROMIUM_PATH si besoin)
 ```
 
 Les tests d'intégration utilisent `TEST_DATABASE_URL` (défaut `postgres://lea:lea@localhost:5432/lea_test`).
 Le parcours e2e génère des **données de test fictives** (noms inventés, communes réelles) et vérifie notamment :
 accueil pas à pas, réimports sans doublons, rapprochement, glisser-déposer, clôture d'une visite et points gagnés,
-application d'un scénario de tournée, export, données intactes après reconnexion, absence d'erreur JavaScript et de
-débordement sur mobile.
+application d'un scénario de tournée, import d'un fichier clients Excel, export, données intactes après
+reconnexion, absence d'erreur JavaScript et de débordement sur mobile.
 
 ---
 

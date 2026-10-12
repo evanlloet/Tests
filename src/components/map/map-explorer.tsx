@@ -123,6 +123,7 @@ export function MapExplorer({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{p.name}</span>
                       <span className="block truncate text-xs text-muted">
+                        {p.approx ? <span title="Position approximative : centre de la commune">≈ </span> : null}
                         {p.city} · {DUE_LABEL[p.due] ?? p.due}
                       </span>
                     </span>

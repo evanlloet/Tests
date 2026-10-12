@@ -20,8 +20,19 @@ export function PharmacyImportForm() {
       <Card>
         <CardBody>
           <form action={action} onSubmit={submitWithoutReset(action)} className="space-y-4">
-            <Field label="Fichier CSV" htmlFor="file" hint="Séparateur virgule, point-virgule ou tabulation. Encodage UTF-8 ou Windows (Excel).">
-              <Input id="file" name="file" type="file" accept=".csv,.txt,text/csv" required className="h-auto py-2" />
+            <Field
+              label="Fichier Excel (.xlsx) ou CSV"
+              htmlFor="file"
+              hint="Excel : la première feuille remplie est lue. CSV : séparateur virgule, point-virgule ou tabulation, encodage UTF-8 ou Windows."
+            >
+              <Input
+                id="file"
+                name="file"
+                type="file"
+                accept=".xlsx,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                required
+                className="h-auto py-2"
+              />
             </Field>
             <Button type="submit" size="lg" disabled={pending}>
               {pending ? "Import en cours…" : "Importer"}
@@ -34,7 +45,7 @@ export function PharmacyImportForm() {
 
       {result ? (
         <Card>
-          <CardHeader title="Résultat de l'import" description={`Colonnes reconnues : ${result.detectedColumns.join(", ")}`} />
+          <CardHeader title="Résultat de l'import" description={`${result.totalRows} ligne(s) lue(s) dans le fichier ${result.format === "xlsx" ? "Excel" : "CSV"}.`} />
           <CardBody className="space-y-4">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label="Créées" value={result.created} />
@@ -42,6 +53,31 @@ export function PharmacyImportForm() {
               <Stat label="Inchangées" value={result.unchanged} />
               <Stat label="Ignorées" value={result.skipped} />
             </div>
+            {result.locatedByCommune ? (
+              <Notice tone="info">
+                {result.locatedByCommune} fiche(s) sans adresse placée(s) au centre de leur commune : position approximative, suffisante pour
+                estimer les trajets. Vous pouvez saisir l'adresse ou les coordonnées exactes sur chaque fiche.
+              </Notice>
+            ) : null}
+            <details className="rounded-2xl border border-border p-3 text-sm">
+              <summary className="cursor-pointer font-medium">Correspondance des {result.mapping.length} colonnes</summary>
+              <table className="mt-2 w-full text-left text-xs">
+                <thead className="text-muted">
+                  <tr>
+                    <th className="py-1 pr-2 font-medium">Colonne du fichier</th>
+                    <th className="py-1 font-medium">Dans Léa</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.mapping.map((m) => (
+                    <tr key={m.header} className="border-t border-border/60">
+                      <td className="py-1 pr-2 font-medium">{m.header}</td>
+                      <td className="py-1 text-muted">{m.label}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
             {result.issues.length ? (
               <details className="rounded-2xl border border-border p-3 text-sm" open={result.issues.length <= 10}>
                 <summary className="cursor-pointer font-medium">{result.issues.length} remarque(s) sur le fichier</summary>

@@ -52,3 +52,12 @@ export function departmentName(code: string | null | undefined): string {
   if (!code) return "Département inconnu";
   return DEPARTMENTS[code] ?? `Département ${code}`;
 }
+
+/** Départements limitrophes des départements suivis (contrôle de cohérence zone ↔ code postal). */
+export const NEIGHBOURING_DEPARTMENTS: Partial<Record<string, readonly string[]>> = {
+  "14": ["27", "50", "61"],
+  "35": ["22", "44", "49", "50", "53", "56"],
+  "50": ["14", "35", "53", "61"],
+  "53": ["35", "49", "50", "61", "72"],
+  "61": ["14", "27", "28", "50", "53", "72"],
+};

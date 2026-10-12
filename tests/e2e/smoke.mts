@@ -1,7 +1,7 @@
 /**
  * Parcours de bout en bout dans un vrai navigateur (Chromium via playwright-core) :
  * inscription, domicile, import pharmacies (×2, sans doublon), import Outlook ICS (×2),
- * rapprochement, fiche, prochaine visite, planning, tournée, carte, pilotage, mobile,
+ * rapprochement, fiche, prochaine visite, planning, tournée, carte, pilotage, fichier clients Excel, mobile,
  * mode sombre. Utilise des DONNÉES DE TEST FICTIVES générées à la volée.
  *
  * Prérequis : application démarrée (npm run dev) sur une base de développement.
@@ -12,6 +12,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { chromium, type Page } from "playwright-core";
 import { demoIcs, demoPharmacyCsv } from "../fixtures/demo-data.ts";
 
@@ -185,7 +186,7 @@ await shot("11-carte");
 await page.goto(`${BASE}/pilotage`);
 await shot("12-pilotage");
 
-// 10 ter. Récompenses
+// 10 bis. Récompenses
 await page.goto(`${BASE}/recompenses`);
 await page.getByText("Défis de la semaine").waitFor();
 log("récompenses :", (await page.locator("text=points").first().innerText()).replace(/\n/g, " "));
@@ -194,7 +195,23 @@ await page.goto(`${BASE}/planning?vue=mois`);
 await page.getByText("Humeur du mois").waitFor();
 await shot("08b-planning-mois");
 
-// 10 bis. Export des données et persistance après déconnexion / reconnexion
+// 10 ter. Fichier clients Excel (données fictives au format de l'export « CLIENTS » du laboratoire)
+await page.goto(`${BASE}/pharmacies/import`);
+await page.setInputFiles("#file", fileURLToPath(new URL("../fixtures/clients-exemple.xlsx", import.meta.url)));
+await page.click("button[type=submit]");
+await page.getByText("Résultat de l'import").waitFor({ timeout: 30000 });
+await page.getByText(/5 fiche\(s\) sans adresse/).waitFor(); // la 6e (95300) est signalée, pas devinée
+log("fichier clients Excel :", (await page.locator("text=Créées").locator("..").innerText()).replace(/\n/g, " "));
+await page.goto(`${BASE}/pharmacies?ciblage=Premium`);
+await page.getByText("Exemple Distribution").waitFor();
+await shot("02b-fichier-clients");
+await page.goto(`${BASE}/pharmacies?q=Phare`);
+await Promise.all([page.waitForURL(/\/pharmacies\/[0-9a-f-]{36}$/), page.getByText("Grande Pharmacie du Phare").first().click()]);
+await page.getByText("SELARL GRANDE PHIE DU PHARE").waitFor();
+await page.getByText("Visite prévue au fichier").first().waitFor();
+await shot("06b-fiche-client");
+
+// 10 quater. Export des données et persistance après déconnexion / reconnexion
 const exportRes = await page.request.get(`${BASE}/api/export`);
 const exported = await exportRes.json();
 log("export :", exportRes.status(), `${exported.pharmacies.length} pharmacies, ${exported.appointments.length} rendez-vous`);

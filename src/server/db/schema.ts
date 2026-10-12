@@ -203,6 +203,17 @@ export const pharmacies = pgTable(
     city: text("city"),
     departmentCode: text("department_code"),
     phone: text("phone"),
+    email: text("email"),
+    /** Canal du fichier clients : « Pharmacie », « GMS »… */
+    channel: text("channel"),
+    /** Zone commerciale du fichier clients (code UGA, ex. « 14HER ») */
+    salesZone: text("sales_zone"),
+    /** Groupement d'achat */
+    buyingGroup: text("buying_group"),
+    /** Ciblages du fichier clients (« Premium », « Perfect Store »…) */
+    targeting: text("targeting").array(),
+    /** Colonnes du fichier sans équivalent dans Léa, conservées telles quelles */
+    extra: jsonb("extra").$type<Record<string, string>>(),
     lat: doublePrecision("lat"),
     lng: doublePrecision("lng"),
     geoPrecision: text("geo_precision", { enum: ["exact", "street", "city", "unknown"] }),
@@ -224,6 +235,7 @@ export const pharmacies = pgTable(
       .on(t.userId, t.externalSource, t.externalId)
       .where(sql`${t.externalId} is not null`),
     index("pharmacies_user_department_idx").on(t.userId, t.departmentCode),
+    index("pharmacies_user_sales_zone_idx").on(t.userId, t.salesZone),
   ],
 );
 
@@ -253,6 +265,13 @@ export const pharmacyMetrics = pgTable("pharmacy_metrics", {
   annualRevenue: numeric("annual_revenue", { precision: 14, scale: 2 }),
   potential: text("potential", { enum: ["fort", "moyen", "faible"] }),
   size: text("size"),
+  /** CA de l'année précédente et de l'année en cours tels que fournis par le fichier clients (peuvent être négatifs : avoirs) */
+  revenuePreviousYear: numeric("revenue_previous_year", { precision: 14, scale: 2 }),
+  revenueCurrentYear: numeric("revenue_current_year", { precision: 14, scale: 2 }),
+  /** Dernière commande connue (fichier clients) — ce n'est pas une visite */
+  lastOrderOn: date("last_order_on"),
+  /** Prochaine visite indiquée par le fichier clients (aucun rendez-vous n'est créé automatiquement) */
+  plannedVisitOn: date("planned_visit_on"),
   /** Fréquence individuelle — prioritaire sur la fréquence de la catégorie */
   targetVisitsPerYear: smallint("target_visits_per_year"),
   source: text("source").notNull().default("manual"),

@@ -1,5 +1,10 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseDecimal, parsePharmacyCsv } from "./pharmacy-import";
+import { parseDay, parseDecimal, parsePharmacyCsv, parsePharmacyFile } from "./pharmacy-import";
+
+const decode = (b: Uint8Array) => new TextDecoder().decode(b);
+const clientsXlsx = () => new Uint8Array(readFileSync(path.join(__dirname, "../../tests/fixtures/clients-exemple.xlsx")));
 
 describe("import CSV de pharmacies", () => {
   it("reconnaît les colonnes, le département et l'identifiant FINESS", () => {
@@ -56,3 +61,94 @@ describe("import CSV de pharmacies", () => {
     expect(parseDecimal("abc")).toBeNull();
   });
 });
+
+describe("fichier clients Excel (format de l'export CLIENTS)", () => {
+  const res = parsePharmacyFile(clientsXlsx(), decode);
+
+  it("associe chaque colonne à un champ de Léa", () => {
+    expect(res.format).toBe("xlsx");
+    expect(res.externalSource).toBe("code_client");
+    expect(Object.fromEntries(res.mapping.map((m) => [m.header, m.field]))).toEqual({
+      Code: "externalId",
+      "Lib Sous-Canal Client": "channel",
+      "Nom Client": "name",
+      "Code Postal": "postalCode",
+      Ville: "city",
+      "N° Tel": "phone",
+      "Adresse Mail": "email",
+      "Code UGA 746 Tiers Cde": "salesZone",
+      "Lib Groupement Client": "buyingGroup",
+      "Ciblage Client Oral Care": "category",
+      "Ciblage Premium": "targeting",
+      "Ciblage Perfect Store": "targeting",
+      "Ciblage TLV": "targeting",
+      "Ciblage GC": "targeting",
+      "Nom Agent Oral Care": "extra",
+      "KAM  régional": "extra",
+      "Date de dernière Commande": "lastOrder",
+      "Date de prochaine visite": "plannedVisit",
+      "CAf CFaj A-1": "revenuePreviousYear",
+      "CAf A": "revenueCurrentYear",
+      "Evol A/A-1": "derived",
+    });
+  });
+
+  it("lit une ligne complète sans rien inventer", () => {
+    expect(res.rows[0]).toMatchObject({
+      name: "Grande Pharmacie du Phare",
+      legalName: "SELARL GRANDE PHIE DU PHARE",
+      externalId: "9000001",
+      channel: "Pharmacie",
+      postalCode: "14000",
+      departmentCode: "14",
+      email: "contact@phare.example.test",
+      salesZone: "14CAE",
+      buyingGroup: "SAS GROUPEMENT EXEMPLE",
+      category: "A",
+      targeting: ["Perfect Store", "GC (R)"],
+      revenuePreviousYear: 100000,
+      revenueCurrentYear: 140000,
+      lastOrderOn: "2026-08-31",
+      plannedVisitOn: "2026-10-05",
+      lat: null,
+      extra: { "Nom Agent Oral Care": "Agent Exemple", "KAM  régional": "KAM Exemple" },
+    });
+    expect(res.rows[1]).toMatchObject({ name: "Exemple Distribution", channel: "GMS", targeting: ["Premium"], plannedVisitOn: null });
+    // Valeurs absentes : vides, jamais déduites
+    expect(res.rows[2]).toMatchObject({ targeting: ["GC"], buyingGroup: null, revenueCurrentYear: null });
+    expect(res.rows[4]).toMatchObject({ name: "Mme Dupont Claire", revenuePreviousYear: null, revenueCurrentYear: 66 });
+  });
+
+  it("signale les incohérences du fichier", () => {
+    const messages = res.issues.map((i) => `${i.row}: ${i.message}`);
+    expect(messages).toContain("5: Code postal 95300 (département 95) éloigné de la zone 14HER : adresse à vérifier.");
+    expect(messages.some((m) => m.startsWith("7: E-mail « pas-un-mail »"))).toBe(true);
+    expect(res.rows[5]!.email).toBeNull();
+    expect(res.issues).toHaveLength(2);
+  });
+
+  it("accepte les mêmes colonnes en CSV, avec « - » pour une valeur vide", () => {
+    const csv = parsePharmacyCsv(
+      ["Code;Nom Client;Code Postal;Ville;Ciblage Client Oral Care;Ciblage Premium;Date de prochaine visite;CA A-1;CA A", "42;SELARL PHIE DU PORT;14600;HONFLEUR;-;P;13/10/2026;1 200;-"].join("\n"),
+    );
+    expect(csv.rows[0]).toMatchObject({
+      name: "Pharmacie du Port",
+      externalId: "42",
+      category: null,
+      targeting: ["Premium"],
+      plannedVisitOn: "2026-10-13",
+      revenuePreviousYear: 1200,
+      revenueCurrentYear: null,
+    });
+    expect(csv.issues).toEqual([]);
+  });
+
+  it("lit les dates françaises et ISO, refuse les dates impossibles", () => {
+    expect(parseDay("2026-08-31")).toBe("2026-08-31");
+    expect(parseDay("31/08/2026")).toBe("2026-08-31");
+    expect(parseDay("1/9/26")).toBe("2026-09-01");
+    expect(parseDay("30/02/2026")).toBeNull();
+    expect(parseDay("demain")).toBeNull();
+  });
+});
+

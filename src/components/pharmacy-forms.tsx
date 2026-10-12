@@ -62,10 +62,13 @@ export function PharmacyIdentityFields({ pharmacy: p }: { pharmacy: Pharmacy | n
         <Field label="Téléphone" htmlFor="phone">
           <Input id="phone" name="phone" type="tel" defaultValue={p?.phone ?? ""} />
         </Field>
-        <Field label="Identifiant externe (FINESS…)" htmlFor="externalId">
-          <Input id="externalId" name="externalId" defaultValue={p?.externalId ?? ""} />
+        <Field label="E-mail" htmlFor="email">
+          <Input id="email" name="email" type="email" defaultValue={p?.email ?? ""} maxLength={200} />
         </Field>
       </div>
+      <Field label="Identifiant externe (code client, FINESS…)" htmlFor="externalId">
+        <Input id="externalId" name="externalId" defaultValue={p?.externalId ?? ""} />
+      </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Latitude" htmlFor="lat">
           <Input id="lat" name="lat" defaultValue={p?.lat ?? ""} inputMode="decimal" placeholder="ex. 49,1829" />

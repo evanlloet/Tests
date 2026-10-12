@@ -13,6 +13,8 @@ export type MapPharmacy = {
   category: string | null;
   sectorColor: string | null;
   due: string;
+  /** Position approximative (centre de la commune) */
+  approx?: boolean;
 };
 
 export type MapStop = { id: string; label: string; lat: number; lng: number; order: number; time: string; pharmacyId: string | null };
@@ -110,6 +112,8 @@ export function LeaMap({
             "circle-color": ["get", "color"],
             "circle-stroke-color": ["case", ["boolean", ["get", "selected"], false], "#c4502f", "#ffffff"],
             "circle-stroke-width": ["case", ["boolean", ["get", "selected"], false], 3, 1.5],
+            // Position approximative (centre de la commune) : point atténué
+            "circle-opacity": ["case", ["boolean", ["get", "approx"], false], 0.65, 1],
           },
         });
         map.on("click", "pharmacies-circles", (e) => {
@@ -138,7 +142,7 @@ export function LeaMap({
       features: pharmacies.map((p) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [p.lng, p.lat] },
-        properties: { id: p.id, color: CATEGORY_COLORS[p.category ?? ""] ?? UNKNOWN_CATEGORY_COLOR, selected: p.id === selectedId },
+        properties: { id: p.id, color: CATEGORY_COLORS[p.category ?? ""] ?? UNKNOWN_CATEGORY_COLOR, selected: p.id === selectedId, approx: Boolean(p.approx) },
       })),
     });
     const coords: [number, number][] = line ?? [

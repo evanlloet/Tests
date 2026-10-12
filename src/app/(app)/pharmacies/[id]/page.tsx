@@ -1,16 +1,18 @@
-import { CalendarPlus, ChevronDown, MapPin, Navigation, Phone, Sparkles } from "lucide-react";
+import { CalendarPlus, ChevronDown, Mail, MapPin, Navigation, Phone, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { OutcomeButtons } from "@/components/appointment-actions";
 import { Buddy } from "@/components/buddy";
+import { ChannelBadge, RevenueTrend, TargetingChips } from "@/components/client-data";
 import { APPOINTMENT_STATUS, formatEuros, OUTCOME, SOURCE_LABEL } from "@/components/labels";
 import { BUDDY_PASTEL, Hearts, PharmacyAvatar, pharmacyMoodSentence } from "@/components/mood-ui";
 import { IdentityForm, MetricsForm, PreferencesForm } from "@/components/pharmacy-forms";
 import { Badge, CategoryBadge, SectorDot } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, Tile } from "@/components/ui/card";
+import { geoLabel, isApproximate } from "@/domain/client-data";
 import { departmentName } from "@/domain/departments";
 import { targetVisitsPerYear } from "@/domain/frequency";
 import { avatarFor, PHARMACY_MOODS } from "@/domain/mood";
@@ -118,20 +120,41 @@ export default async function PharmacyPage({ params }: { params: Promise<{ id: s
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold">
                 <SectorDot color={territory?.color} className="size-2" /> {departmentName(p.departmentCode)}
               </span>
+              {p.salesZone ? <span className="rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-semibold">Zone {p.salesZone}</span> : null}
+              <ChannelBadge channel={p.channel} />
+              <TargetingChips tags={p.targeting} />
               {p.status === "closed" ? <Badge tone="danger">Fermée</Badge> : null}
             </div>
             <h1 className="mt-2 text-3xl leading-tight font-extrabold sm:text-4xl">{p.name}</h1>
+            {p.legalName || p.externalId || p.buyingGroup ? (
+              <p className="mt-0.5 text-sm opacity-75">
+                {[p.legalName, p.externalId ? `${p.externalSource === "code_client" ? "code client" : (p.externalSource ?? "id")} ${p.externalId}` : null, p.buyingGroup ? `groupement ${p.buyingGroup}` : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
             <p className="mt-1 text-base font-medium">« {pharmacyMoodSentence(status, (d) => formatDayLong(d))} »</p>
             <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm opacity-80">
               <span className="inline-flex items-center gap-1">
                 <MapPin className="size-4" aria-hidden />
                 {[p.addressLine, [p.postalCode, p.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "Adresse inconnue"}
+                {isApproximate(p) ? <span className="text-xs">(position approximative)</span> : null}
               </span>
               {p.phone ? (
                 <a href={`tel:${p.phone.replace(/\s/g, "")}`} className="inline-flex items-center gap-1 font-semibold underline">
                   <Phone className="size-4" aria-hidden /> {p.phone}
                 </a>
               ) : null}
+              {p.email
+                ? p.email
+                    .split(/[;,\s]+/)
+                    .filter(Boolean)
+                    .map((e) => (
+                      <a key={e} href={`mailto:${e}`} className="inline-flex min-w-0 items-center gap-1 font-semibold break-all underline">
+                        <Mail className="size-4 shrink-0" aria-hidden /> {e}
+                      </a>
+                    ))
+                : null}
             </p>
           </div>
         </div>
@@ -183,12 +206,49 @@ export default async function PharmacyPage({ params }: { params: Promise<{ id: s
             {status.year.done} réalisée(s) · {status.year.identified} à confirmer · {status.year.planned} prévue(s)
           </p>
         </Tile>
-        <Tile color="mint">
-          <p className="text-sm font-semibold">Potentiel</p>
-          <p className="mt-1 font-display text-2xl font-extrabold capitalize">{metrics?.potential ?? "—"}</p>
-          <p className="mt-1 text-xs opacity-75">{metrics?.annualRevenue ? `CA ${formatEuros(metrics.annualRevenue)}` : "CA inconnu"}</p>
-        </Tile>
+        {metrics?.revenueCurrentYear || metrics?.revenuePreviousYear ? (
+          <Tile color="mint">
+            <p className="text-sm font-semibold">Chiffre d'affaires A</p>
+            <p className="mt-1 font-display text-2xl font-extrabold">{metrics.revenueCurrentYear ? formatEuros(metrics.revenueCurrentYear) : "—"}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-xs opacity-75">
+              A-1 : {metrics.revenuePreviousYear ? formatEuros(metrics.revenuePreviousYear) : "—"}
+              <RevenueTrend previous={metrics.revenuePreviousYear} current={metrics.revenueCurrentYear} className="opacity-100" />
+            </p>
+          </Tile>
+        ) : (
+          <Tile color="mint">
+            <p className="text-sm font-semibold">Potentiel</p>
+            <p className="mt-1 font-display text-2xl font-extrabold capitalize">{metrics?.potential ?? "—"}</p>
+            <p className="mt-1 text-xs opacity-75">{metrics?.annualRevenue ? `CA ${formatEuros(metrics.annualRevenue)}` : "CA inconnu"}</p>
+          </Tile>
+        )}
       </div>
+
+      {/* Informations du fichier clients : commandes et visite planifiée par le laboratoire */}
+      {metrics?.lastOrderOn || metrics?.plannedVisitOn ? (
+        <div className="grid grid-cols-2 gap-3">
+          <Tile color="butter">
+            <p className="text-sm font-semibold">Dernière commande</p>
+            <p className="mt-1 font-display text-2xl font-extrabold">{metrics.lastOrderOn ? formatDayShort(metrics.lastOrderOn) : "—"}</p>
+            <p className="mt-1 text-xs opacity-75">
+              {metrics.lastOrderOn ? `il y a ${diffDays(metrics.lastOrderOn, today)} j · fichier clients (ce n'est pas une visite)` : "inconnue"}
+            </p>
+          </Tile>
+          <Tile color="sky">
+            <p className="text-sm font-semibold">Visite prévue au fichier</p>
+            <p className="mt-1 font-display text-2xl font-extrabold">{metrics.plannedVisitOn ? formatDayShort(metrics.plannedVisitOn) : "—"}</p>
+            <p className="mt-1 text-xs opacity-75">
+              {!metrics.plannedVisitOn
+                ? "aucune date"
+                : status.nextPlanned
+                  ? `rendez-vous dans Léa le ${formatDayShort(status.nextPlanned)}`
+                  : metrics.plannedVisitOn < today
+                    ? "date dépassée, aucun rendez-vous dans Léa"
+                    : "aucun rendez-vous dans Léa pour l'instant"}
+            </p>
+          </Tile>
+        </div>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
         <div className="space-y-5">
@@ -279,7 +339,25 @@ export default async function PharmacyPage({ params }: { params: Promise<{ id: s
               <dt className="text-muted">Identifiant</dt>
               <dd>{p.externalId ? `${p.externalSource ?? "externe"} ${p.externalId}` : "aucun"}</dd>
               <dt className="text-muted">Géolocalisation</dt>
-              <dd>{p.lat !== null ? `${p.geoPrecision ?? "?"} — ${p.geoSource ?? "source inconnue"}` : "absente"}</dd>
+              <dd>{geoLabel(p)}</dd>
+              {p.channel ? (
+                <>
+                  <dt className="text-muted">Canal</dt>
+                  <dd>{p.channel}</dd>
+                </>
+              ) : null}
+              {p.buyingGroup ? (
+                <>
+                  <dt className="text-muted">Groupement</dt>
+                  <dd>{p.buyingGroup}</dd>
+                </>
+              ) : null}
+              {Object.entries(p.extra ?? {}).map(([k, v]) => (
+                <div key={k} className="contents">
+                  <dt className="text-muted">{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
               <dt className="text-muted">Mise à jour</dt>
               <dd>{formatDate(p.updatedAt, user.timezone)}</dd>
               <dt className="text-muted">Créée</dt>

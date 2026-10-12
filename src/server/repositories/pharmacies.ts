@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, type SQL } from "drizzle-orm";
 import type { DbOrTx } from "../db/client";
 import { appointments, pharmacies, pharmacyMetrics, pharmacyPreferences, visitReports } from "../db/schema";
 
@@ -7,6 +7,9 @@ export type PharmacyFilters = {
   q?: string;
   department?: string;
   category?: "A" | "B" | "C" | "D" | "none";
+  channel?: string;
+  zone?: string;
+  tag?: string;
   ids?: string[];
 };
 
@@ -21,10 +24,17 @@ export async function listPharmaciesWithMetrics(db: DbOrTx, userId: string, filt
         ilike(pharmacies.postalCode, like),
         ilike(pharmacies.externalId, like),
         ilike(pharmacies.addressLine, like),
+        ilike(pharmacies.legalName, like),
+        ilike(pharmacies.buyingGroup, like),
+        ilike(pharmacies.email, like),
+        ilike(pharmacies.salesZone, like),
       )!,
     );
   }
   if (filters.department) conditions.push(eq(pharmacies.departmentCode, filters.department));
+  if (filters.channel) conditions.push(eq(pharmacies.channel, filters.channel));
+  if (filters.zone) conditions.push(eq(pharmacies.salesZone, filters.zone));
+  if (filters.tag) conditions.push(sql`${filters.tag} = any(${pharmacies.targeting})`);
   if (filters.category === "none") conditions.push(isNull(pharmacyMetrics.category));
   else if (filters.category) conditions.push(eq(pharmacyMetrics.category, filters.category));
   if (filters.ids) {
@@ -153,4 +163,28 @@ export async function listForMatching(db: DbOrTx, userId: string) {
 export async function countPharmacies(db: DbOrTx, userId: string) {
   const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(pharmacies).where(eq(pharmacies.userId, userId));
   return row?.n ?? 0;
+}
+
+/** Valeurs présentes dans le référentiel pour les filtres (canal, zone, ciblage). */
+export async function pharmacyFacets(db: DbOrTx, userId: string) {
+  const count = sql<number>`count(*)::int`;
+  const [channels, zones, tags] = await Promise.all([
+    db
+      .select({ value: pharmacies.channel, n: count })
+      .from(pharmacies)
+      .where(and(eq(pharmacies.userId, userId), isNotNull(pharmacies.channel)))
+      .groupBy(pharmacies.channel)
+      .orderBy(asc(pharmacies.channel)),
+    db
+      .select({ value: pharmacies.salesZone, n: count })
+      .from(pharmacies)
+      .where(and(eq(pharmacies.userId, userId), isNotNull(pharmacies.salesZone)))
+      .groupBy(pharmacies.salesZone)
+      .orderBy(asc(pharmacies.salesZone)),
+    db.execute<{ value: string; n: number }>(
+      sql`select tag as value, count(*)::int as n from ${pharmacies}, unnest(${pharmacies.targeting}) as tag where ${pharmacies.userId} = ${userId} group by tag order by tag`,
+    ),
+  ]);
+  const clean = (rows: { value: string | null; n: number }[]) => rows.filter((r): r is { value: string; n: number } => r.value !== null);
+  return { channels: clean(channels), zones: clean(zones), tags: clean([...tags]) };
 }

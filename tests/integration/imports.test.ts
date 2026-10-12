@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { appointmentMatches, appointments, auditLogs, calendarEvents, pharmacies, pharmacyMetrics } from "@/server/db/schema";
 import { importCalendarFile } from "@/server/services/calendar-import";
 import { ignoreMatch, rematchOpenEvents, validateMatch } from "@/server/services/match-review";
-import { importPharmacyCsv } from "@/server/services/pharmacy-import";
+import { importPharmacyFile } from "@/server/services/pharmacy-import";
 import { bytes, createTestUser, resetDatabase, testDb } from "../support/db";
 
 const PHARMACIES_CSV = [
@@ -53,11 +55,55 @@ afterAll(async () => {
 describe("import du référentiel pharmacies", () => {
   beforeEach(resetDatabase);
 
+  it("importe le fichier clients Excel : tous les champs, centre de la commune, réimport sans changement", async () => {
+    const user = await createTestUser();
+    const file = { name: "CLIENTS.xlsx", bytes: new Uint8Array(readFileSync(path.join(__dirname, "../fixtures/clients-exemple.xlsx"))) };
+    const first = await importPharmacyFile(testDb, user.id, file);
+    expect(first).toMatchObject({ created: 6, format: "xlsx", locatedByCommune: 5 });
+    expect(first.issues.map((i) => i.message)).toContain("Commune « 95300 HEROUVILLE » introuvable : fiche non placée sur la carte.");
+    expect(first.mapping.find((m) => m.header === "Ciblage Client Oral Care")?.label).toMatch(/Catégorie/);
+
+    const rows = await testDb.select().from(pharmacies).where(eq(pharmacies.userId, user.id));
+    const byCode = (code: string) => rows.find((p) => p.externalId === code)!;
+    const phare = byCode("9000001");
+    expect(phare).toMatchObject({
+      name: "Grande Pharmacie du Phare",
+      legalName: "SELARL GRANDE PHIE DU PHARE",
+      externalSource: "code_client",
+      channel: "Pharmacie",
+      salesZone: "14CAE",
+      buyingGroup: "SAS GROUPEMENT EXEMPLE",
+      email: "contact@phare.example.test",
+      targeting: ["Perfect Store", "GC (R)"],
+      geoPrecision: "city",
+      geoSource: "centre_commune:commune:Caen",
+      extra: { "Nom Agent Oral Care": "Agent Exemple", "KAM  régional": "KAM Exemple" },
+    });
+    expect(byCode("9000002")).toMatchObject({ channel: "GMS", name: "Exemple Distribution" });
+    expect(byCode("9000003").geoSource).toBe("centre_commune:commune-nouvelle:Cherbourg-en-Cotentin");
+    expect(byCode("9000004")).toMatchObject({ lat: null, geoPrecision: null });
+    const [metrics] = await testDb.select().from(pharmacyMetrics).where(eq(pharmacyMetrics.pharmacyId, phare.id));
+    expect(metrics).toMatchObject({
+      category: "A",
+      revenuePreviousYear: "100000.00",
+      revenueCurrentYear: "140000.00",
+      lastOrderOn: "2026-08-31",
+      plannedVisitOn: "2026-10-05",
+    });
+
+    // Une position précise n'est jamais remplacée par le centre de la commune ; réimport identique = aucun changement
+    await testDb.update(pharmacies).set({ lat: 49.19, lng: -0.36, geoPrecision: "exact", geoSource: "saisie manuelle" }).where(eq(pharmacies.id, phare.id));
+    const second = await importPharmacyFile(testDb, user.id, file);
+    expect(second).toMatchObject({ created: 0, updated: 0, unchanged: 6 });
+    const [after] = await testDb.select().from(pharmacies).where(eq(pharmacies.id, phare.id));
+    expect(after).toMatchObject({ lat: 49.19, lng: -0.36, geoPrecision: "exact" });
+  });
+
   it("crée les fiches puis ne crée aucun doublon lors d'un second import", async () => {
     const user = await createTestUser();
-    const first = await importPharmacyCsv(testDb, user.id, { name: "pharmacies.csv", bytes: bytes(PHARMACIES_CSV) });
+    const first = await importPharmacyFile(testDb, user.id, { name: "pharmacies.csv", bytes: bytes(PHARMACIES_CSV) });
     expect(first).toMatchObject({ created: 4, updated: 0, unchanged: 0 });
-    const second = await importPharmacyCsv(testDb, user.id, { name: "pharmacies.csv", bytes: bytes(PHARMACIES_CSV) });
+    const second = await importPharmacyFile(testDb, user.id, { name: "pharmacies.csv", bytes: bytes(PHARMACIES_CSV) });
     expect(second).toMatchObject({ created: 0, updated: 0, unchanged: 4 });
     const [count] = await testDb.select({ n: sql<number>`count(*)::int` }).from(pharmacies);
     expect(count!.n).toBe(4);
@@ -65,9 +111,9 @@ describe("import du référentiel pharmacies", () => {
 
   it("met à jour sans effacer les données existantes", async () => {
     const user = await createTestUser();
-    await importPharmacyCsv(testDb, user.id, { name: "a.csv", bytes: bytes(PHARMACIES_CSV) });
+    await importPharmacyFile(testDb, user.id, { name: "a.csv", bytes: bytes(PHARMACIES_CSV) });
     const update = ["FINESS;Nom;Code postal;Ville;Téléphone;Catégorie", "140000004;Pharmacie du Port;14600;Honfleur;02 31 00 00 00;"].join("\n");
-    const res = await importPharmacyCsv(testDb, user.id, { name: "b.csv", bytes: bytes(update) });
+    const res = await importPharmacyFile(testDb, user.id, { name: "b.csv", bytes: bytes(update) });
     expect(res).toMatchObject({ created: 0, updated: 1 });
     const [port] = await testDb
       .select({ p: pharmacies, m: pharmacyMetrics })
@@ -82,8 +128,8 @@ describe("import du référentiel pharmacies", () => {
   it("isole les données de chaque utilisateur", async () => {
     const a = await createTestUser("a@example.test");
     const b = await createTestUser("b@example.test");
-    await importPharmacyCsv(testDb, a.id, { name: "a.csv", bytes: bytes(PHARMACIES_CSV) });
-    const res = await importPharmacyCsv(testDb, b.id, { name: "b.csv", bytes: bytes(PHARMACIES_CSV) });
+    await importPharmacyFile(testDb, a.id, { name: "a.csv", bytes: bytes(PHARMACIES_CSV) });
+    const res = await importPharmacyFile(testDb, b.id, { name: "b.csv", bytes: bytes(PHARMACIES_CSV) });
     expect(res.created).toBe(4);
     const [count] = await testDb.select({ n: sql<number>`count(*)::int` }).from(pharmacies).where(eq(pharmacies.userId, b.id));
     expect(count!.n).toBe(4);
@@ -95,7 +141,7 @@ describe("import Outlook et rapprochement", () => {
 
   async function setup() {
     const user = await createTestUser();
-    await importPharmacyCsv(testDb, user.id, { name: "p.csv", bytes: bytes(PHARMACIES_CSV) });
+    await importPharmacyFile(testDb, user.id, { name: "p.csv", bytes: bytes(PHARMACIES_CSV) });
     return user;
   }
 
@@ -180,7 +226,7 @@ describe("import Outlook et rapprochement", () => {
   it("relance le rapprochement après ajout d'une pharmacie au référentiel", async () => {
     const user = await setup();
     await importCalendarFile(testDb, user, { name: "agenda.ics", bytes: bytes(ICS) }, { now });
-    await importPharmacyCsv(testDb, user.id, {
+    await importPharmacyFile(testDb, user.id, {
       name: "ajout.csv",
       bytes: bytes("Nom;Code postal;Ville\nPharmacie des Remparts;14500;Vire"),
     });
@@ -197,7 +243,7 @@ describe("suppression du compte", () => {
     const a = await createTestUser("a@example.test");
     const b = await createTestUser("b@example.test");
     for (const u of [a, b]) {
-      await importPharmacyCsv(testDb, u.id, { name: "p.csv", bytes: bytes(PHARMACIES_CSV) });
+      await importPharmacyFile(testDb, u.id, { name: "p.csv", bytes: bytes(PHARMACIES_CSV) });
       await importCalendarFile(testDb, u, { name: "agenda.ics", bytes: bytes(ICS) }, { now });
     }
     const { users } = await import("@/server/db/schema");

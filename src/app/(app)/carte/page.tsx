@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapExplorer } from "@/components/map/map-explorer";
 import { Input } from "@/components/ui/form";
 import { PageHeader } from "@/components/ui/page-header";
+import { isApproximate } from "@/domain/client-data";
 import { hasLocation } from "@/domain/geo";
 import { formatDayLong, formatHHmm, isDayKey } from "@/domain/time";
 import { requireUser } from "@/server/auth/session";
@@ -41,8 +42,10 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
       category: i.metrics?.category ?? null,
       sectorColor: i.territory?.color ?? null,
       due: i.status.dueState,
+      approx: isApproximate(i.pharmacy),
     }));
   const missing = overview.length - pharmacies.length;
+  const approximate = pharmacies.filter((p) => p.approx).length;
 
   return (
     <>
@@ -58,9 +61,10 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
           </form>
         }
       />
-      {missing > 0 ? (
+      {missing > 0 || approximate > 0 ? (
         <p className="mb-3 text-sm text-muted">
-          {missing} pharmacie(s) sans coordonnées ne sont pas affichées.{" "}
+          {missing > 0 ? `${missing} pharmacie(s) sans coordonnées ne sont pas affichées. ` : ""}
+          {approximate > 0 ? `${approximate} pharmacie(s) placée(s) au centre de leur commune (≈, points atténués : position approximative). ` : ""}
           <Link href="/pharmacies" className="text-primary underline">
             Compléter les fiches
           </Link>

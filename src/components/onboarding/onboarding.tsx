@@ -636,7 +636,7 @@ function Tour({ gamification, onBack, onDone }: { gamification: boolean; onBack:
 
 function DoneStep({ firstName }: { firstName: string }) {
   const actions = [
-    { next: "pharmacies", title: "Importer mes pharmacies", text: "Fichier CSV, FINESS ou export maison", tile: "bg-peach", icon: Store },
+    { next: "pharmacies", title: "Importer mes pharmacies", text: "Fichier clients Excel, CSV ou FINESS", tile: "bg-peach", icon: Store },
     { next: "agenda", title: "Importer mon agenda Outlook", text: "Deux ans d'historique en fichier .ics", tile: "bg-sky", icon: FileUp },
     { next: "accueil", title: "Découvrir l'accueil", text: "Je ferai les imports plus tard", tile: "bg-mint", icon: Sparkles },
   ] as const;
