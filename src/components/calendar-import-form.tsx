@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import { formatDayShort } from "@/domain/time";
-import { importCalendarAction } from "@/server/actions/calendar";
+import { importCalendarAction, previewCalendarAction } from "@/server/actions/calendar";
 import type { ActionResult } from "@/server/actions/result";
-import type { CalendarImportSummary } from "@/server/services/calendar-import";
+import type { CalendarImportSummary, CalendarPreview } from "@/server/services/calendar-import";
+import { Badge } from "./ui/badge";
+import { submitWithoutReset } from "./action-form";
 import { Button } from "./ui/button";
 import { Card, CardBody, CardHeader } from "./ui/card";
 import { Checkbox, Field, Input } from "./ui/form";
@@ -14,25 +16,53 @@ import { Stat } from "./ui/page-header";
 
 export function CalendarImportForm() {
   const [state, action, pending] = useActionState<ActionResult<CalendarImportSummary> | null, FormData>(importCalendarAction, null);
+  const [previewState, preview, previewing] = useActionState<ActionResult<CalendarPreview> | null, FormData>(previewCalendarAction, null);
+  const [stale, setStale] = useState(true);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Prévisualisation hors « action » de formulaire : React réinitialiserait le formulaire (et le fichier choisi)
+  const runPreview = () => {
+    const form = formRef.current;
+    if (!form || !form.reportValidity()) return;
+    setStale(false);
+    const fd = new FormData(form);
+    startTransition(() => preview(fd));
+  };
   const r = state?.ok ? state.data : undefined;
+  const p = !stale && previewState?.ok ? previewState.data : undefined;
   return (
     <div className="space-y-4">
       <Card>
         <CardBody>
-          <form action={action} className="space-y-4">
+          <form ref={formRef} action={action} onSubmit={submitWithoutReset(action)} className="space-y-4">
             <Field label="Fichier du calendrier" htmlFor="file" hint="Format .ics (recommandé : conserve les fuseaux et les récurrences) ou .csv exporté depuis Outlook.">
-              <Input id="file" name="file" type="file" accept=".ics,.csv,.txt,text/calendar,text/csv" required className="h-auto py-2" />
+              <Input
+                id="file"
+                name="file"
+                type="file"
+                accept=".ics,.csv,.txt,text/calendar,text/csv"
+                required
+                className="h-auto py-2"
+                onChange={() => setStale(true)}
+              />
             </Field>
             <Checkbox
               name="useDescription"
               label="Utiliser aussi la description des rendez-vous pour reconnaître les pharmacies (à cocher seulement si les descriptions ne contiennent pas d'informations personnelles)."
             />
-            <Button type="submit" size="lg" disabled={pending}>
-              {pending ? "Analyse en cours…" : "Importer et analyser"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="lg" variant={p ? "secondary" : "primary"} disabled={previewing || pending} onClick={runPreview}>
+                {previewing ? "Lecture…" : "1. Prévisualiser"}
+              </Button>
+              <Button type="submit" size="lg" variant={p ? "primary" : "secondary"} disabled={pending || previewing || !p}>
+                {pending ? "Import en cours…" : "2. Confirmer l'import"}
+              </Button>
+            </div>
+            {!p ? <p className="text-xs text-muted">La prévisualisation lit le fichier sans rien enregistrer.</p> : null}
           </form>
         </CardBody>
       </Card>
+      {previewState && !previewState.ok && !stale ? <Notice tone="danger">{previewState.error}</Notice> : null}
+      {p && !r ? <PreviewCard p={p} /> : null}
       {state && !state.ok ? <Notice tone="danger">{state.error}</Notice> : null}
       {r ? (
         <Card>
@@ -94,5 +124,65 @@ export function CalendarImportForm() {
         </Card>
       ) : null}
     </div>
+  );
+}
+
+function PreviewCard({ p }: { p: CalendarPreview }) {
+  return (
+    <Card>
+      <CardHeader
+        title="Prévisualisation (rien n'est encore enregistré)"
+        description={`${p.format === "ics" ? "Fichier ICS" : "CSV Outlook"} · encodage ${p.encoding}${p.firstDay ? ` · du ${formatDayShort(p.firstDay)} au ${formatDayShort(p.lastDay!)}` : ""}`}
+      />
+      <CardBody className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Événements" value={p.totalEvents} hint={p.sourceEntries !== p.totalEvents ? `${p.sourceEntries} entrées, récurrences développées` : undefined} />
+          <Stat label="Nouveaux" value={p.totalEvents - p.alreadyImported - p.probableDuplicates} />
+          <Stat label="Déjà importés" value={p.alreadyImported} />
+          <Stat label="À venir" value={p.futureEvents} />
+        </div>
+        <ul className="text-sm text-muted">
+          <li>
+            Classement : {p.classification.visit} visite(s) probable(s), {p.classification.unknown} indéterminé(s), {p.classification.not_visit} autre(s)
+          </li>
+          <li>
+            {p.cancelled} annulé(s) · {p.allDay} sur la journée entière · {p.probableDuplicates} doublon(s) probable(s) · {p.duplicatesInFile} doublon(s) dans le fichier
+          </li>
+        </ul>
+        {p.sample.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <caption className="mb-2 text-left text-xs text-muted">Derniers nouveaux événements, horaires convertis en heure de Paris</caption>
+              <tbody className="divide-y divide-border">
+                {p.sample.map((s, i) => (
+                  <tr key={i}>
+                    <td className="py-1.5 pr-3 whitespace-nowrap text-muted">{s.when}</td>
+                    <td className="py-1.5 pr-3">
+                      {s.title}
+                      {s.location ? <span className="text-muted"> · {s.location}</span> : null}
+                    </td>
+                    <td className="py-1.5" title={s.reason}>
+                      <Badge tone={s.classification === "visit" ? "accent" : "neutral"}>
+                        {s.classification === "visit" ? "Visite" : s.classification === "unknown" ? "Indéterminé" : "Autre"}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        {p.warnings.length ? (
+          <details className="rounded-xl border border-border p-3 text-sm">
+            <summary className="cursor-pointer font-medium">{p.warnings.length} remarque(s)</summary>
+            <ul className="mt-2 max-h-60 space-y-1 overflow-auto text-muted">
+              {p.warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
+      </CardBody>
+    </Card>
   );
 }

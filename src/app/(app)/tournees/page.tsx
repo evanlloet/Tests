@@ -51,7 +51,7 @@ export default async function RoutesPage({ searchParams }: { searchParams: Promi
   return (
     <>
       <PageHeader title="Tournée" subtitle={<span className="capitalize">{formatDayLong(day)}</span>} />
-      <form className="mb-4 flex flex-wrap items-end gap-2">
+      <form key={`${day}-${start}-${end}-${allowConfirmed}`} className="mb-4 flex flex-wrap items-end gap-2">
         <label className="space-y-1 text-sm">
           <span className="block text-muted">Date</span>
           <Input type="date" name="date" defaultValue={day} className="h-10 w-auto" />
@@ -87,6 +87,11 @@ export default async function RoutesPage({ searchParams }: { searchParams: Promi
         </button>
       </form>
 
+      {sp.ok ? (
+        <Notice tone="success" className="mb-4">
+          {sp.ok}
+        </Notice>
+      ) : null}
       {error ? <Notice tone="danger">{error}</Notice> : null}
       {!sim && !error ? (
         <EmptyState title="Aucune visite ce jour-là" action={<Link href={`/planning?vue=jour&date=${day}`} className="text-primary underline">Ouvrir le planning</Link>}>

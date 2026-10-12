@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { ActionForm } from "@/components/action-form";
+import { DeleteAccountForm } from "@/components/delete-account";
 import { AddTerritoryForm, FavoritePlaceForm, SettingsForm, TravelForm } from "@/components/profile-forms";
 import { Badge, SectorDot } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -248,6 +249,17 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             <form action={logoutAction}>
               <SubmitButtonLogout />
             </form>
+            <div className="space-y-3 border-t border-border pt-4">
+              <p className="text-sm font-medium">Vos données</p>
+              <p className="text-xs text-muted">
+                Toutes vos données sont stockées dans la base de l&apos;application, isolées par compte. Vous pouvez les exporter à tout moment
+                (fichier JSON) ou les supprimer définitivement.
+              </p>
+              <a href="/api/export" className="inline-flex h-10 items-center rounded-xl border border-border px-4 text-sm font-medium hover:bg-surface-2">
+                Exporter mes données
+              </a>
+              <DeleteAccountForm />
+            </div>
           </CardBody>
         </Card>
       </div>

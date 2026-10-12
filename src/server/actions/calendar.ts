@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "../auth/session";
 import { db } from "../db/client";
-import { importCalendarFile, type CalendarImportSummary } from "../services/calendar-import";
+import { importCalendarFile, previewCalendarFile, type CalendarImportSummary, type CalendarPreview } from "../services/calendar-import";
 import { ignoreMatch, rematchOpenEvents, validateMany, validateMatch } from "../services/match-review";
 import { readUpload, toActionError, type ActionResult } from "./result";
 
@@ -19,6 +19,20 @@ export async function importCalendarAction(
     const summary = await importCalendarFile(db, user, file, { useDescription: formData.get("useDescription") === "on" });
     revalidatePath("/", "layout");
     return { ok: true, data: summary };
+  } catch (err) {
+    return toActionError(err);
+  }
+}
+
+export async function previewCalendarAction(
+  _prev: ActionResult<CalendarPreview> | null,
+  formData: FormData,
+): Promise<ActionResult<CalendarPreview>> {
+  const user = await requireUser();
+  const file = await readUpload(formData.get("file"), [".ics", ".csv", ".txt"]);
+  if (typeof file === "string") return { ok: false, error: file };
+  try {
+    return { ok: true, data: await previewCalendarFile(db, user, file.bytes) };
   } catch (err) {
     return toActionError(err);
   }

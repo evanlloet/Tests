@@ -4,6 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useActionState, useState } from "react";
 import { completeVisitAction } from "@/server/actions/appointments";
 import type { ActionResult } from "@/server/actions/result";
+import { submitWithoutReset } from "./action-form";
 import { Button } from "./ui/button";
 import { Field, Textarea } from "./ui/form";
 import { Notice } from "./ui/notice";
@@ -23,7 +24,7 @@ export function CompleteVisit({ appointmentId, label = "Rendez-vous terminé" }:
     );
   }
   return (
-    <form action={action} className="space-y-3 rounded-2xl border border-primary/30 bg-primary-soft/40 p-4">
+    <form action={action} onSubmit={submitWithoutReset(action)} className="space-y-3 rounded-2xl border border-primary/30 bg-primary-soft/40 p-4">
       <input type="hidden" name="id" value={appointmentId} />
       <Field label="Compte rendu (facultatif)" htmlFor={`summary-${appointmentId}`}>
         <Textarea id={`summary-${appointmentId}`} name="summary" rows={3} placeholder="Points abordés, commande, besoins du pharmacien…" autoFocus />

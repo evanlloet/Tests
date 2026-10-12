@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { isDayKey } from "@/domain/time";
 import { requireUser } from "../auth/session";
@@ -30,6 +31,7 @@ export async function applyOptimizedAction(formData: FormData): Promise<ActionRe
   if (!parsed.success) return { ok: false, error: "Requête invalide." };
   if (formData.get("confirm") !== "on") return { ok: false, error: "Cochez la case de confirmation pour appliquer le scénario." };
   const allowConfirmed = formData.get("allowConfirmed") === "1";
+  let message: string;
   try {
     const sim = await simulateDayPlan(db, user, parsed.data.day, {
       start: endpoint(formData.get("start")),
@@ -45,9 +47,11 @@ export async function applyOptimizedAction(formData: FormData): Promise<ActionRe
       return { ok: false, error: "Ce scénario déplace des rendez-vous confirmés : cochez la seconde confirmation." };
     }
     const { changed } = await applyRoutePlan(db, user, sim.optimizedPlanId, { allowConfirmed });
-    revalidatePath("/", "layout");
-    return { ok: true, message: changed ? `Scénario appliqué : ${changed} visite(s) déplacée(s).` : "Scénario enregistré : aucun horaire à modifier." };
+    message = changed ? `Scénario appliqué : ${changed} visite(s) déplacée(s). Le journal des modifications est à jour.` : "Scénario enregistré : aucun horaire à modifier.";
   } catch (err) {
     return toActionError(err);
   }
+  revalidatePath("/", "layout");
+  // Le formulaire disparaît une fois l'ordre optimal appliqué : le message est porté par l'URL
+  redirect(`/tournees?date=${parsed.data.day}&ok=${encodeURIComponent(message)}`);
 }

@@ -66,6 +66,13 @@ export async function setDefaultTemplate(db: DbOrTx, userId: string, templateId:
 
 /** Active un modèle pour une semaine donnée (null = revenir au modèle par défaut). */
 export async function assignWeekTemplate(db: DbOrTx, userId: string, weekStart: DayKey, templateId: string | null) {
+  if (templateId) {
+    const [owned] = await db
+      .select({ id: weeklyPreferenceTemplates.id })
+      .from(weeklyPreferenceTemplates)
+      .where(and(eq(weeklyPreferenceTemplates.id, templateId), eq(weeklyPreferenceTemplates.userId, userId)));
+    if (!owned) throw new Error("Modèle introuvable");
+  }
   await db.delete(weekTemplateAssignments).where(and(eq(weekTemplateAssignments.userId, userId), eq(weekTemplateAssignments.weekStart, weekStart)));
   if (templateId) await db.insert(weekTemplateAssignments).values({ userId, weekStart, templateId });
 }

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { importPharmaciesAction } from "@/server/actions/pharmacies";
 import type { ActionResult } from "@/server/actions/result";
 import type { PharmacyImportResult } from "@/server/services/pharmacy-import";
+import { submitWithoutReset } from "./action-form";
 import { Button } from "./ui/button";
 import { Card, CardBody, CardHeader } from "./ui/card";
 import { Field, Input } from "./ui/form";
@@ -18,7 +19,7 @@ export function PharmacyImportForm() {
     <div className="space-y-4">
       <Card>
         <CardBody>
-          <form action={action} className="space-y-4">
+          <form action={action} onSubmit={submitWithoutReset(action)} className="space-y-4">
             <Field label="Fichier CSV" htmlFor="file" hint="Séparateur virgule, point-virgule ou tabulation. Encodage UTF-8 ou Windows (Excel).">
               <Input id="file" name="file" type="file" accept=".csv,.txt,text/csv" required className="h-auto py-2" />
             </Field>

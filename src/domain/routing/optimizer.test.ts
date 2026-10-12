@@ -146,3 +146,27 @@ describe("optimisation de l'ordre", () => {
     expect(a.order.map((s) => s.id)).toEqual(b.order.map((s) => s.id));
   });
 });
+
+describe("cohérence après application", () => {
+  it("un scénario appliqué puis re-simulé avec ses horaires figés ne crée aucun retard", () => {
+    const flexible = [stop("lisieux", 3), stop("bayeux", 2), stop("falaise", 4), stop("caen", 1), stop("vire", 5)];
+    const best = optimizeDay({ ctx, stops: flexible, startIndex: 0, endIndex: 0, matrix });
+    for (const s of best.schedule.stops) expect(s.start % 5).toBe(0);
+    // Les horaires proposés deviennent des rendez-vous confirmés (minutes entières)
+    const fixed = best.schedule.stops.map((s) => stop(s.id, s.pointIndex, { fixedStart: s.start }));
+    const again = simulateDay({ ctx, stops: fixed, startIndex: 0, endIndex: 0, matrix });
+    expect(again.violations.filter((v) => v.severity === "hard")).toEqual([]);
+    expect(again.stops.map((s) => s.start)).toEqual(best.schedule.stops.map((s) => s.start));
+  });
+
+  it("ne repousse pas la pause déjeuner au point de mettre en retard un rendez-vous confirmé", () => {
+    const stops = [
+      // Caen se termine à 13 h 40 ; Bayeux (≈ 35 min de route) est confirmé à 14 h 30
+      stop("caen", 1, { fixedStart: 11 * 60, durationMin: 160 }),
+      stop("bayeux", 2, { fixedStart: 14 * 60 + 30 }),
+    ];
+    const s = simulateDay({ ctx, stops, startIndex: 0, endIndex: 0, matrix });
+    expect(s.violations.some((v) => v.code === "late_confirmed")).toBe(false);
+    expect(s.violations.some((v) => v.code === "lunch_not_protected")).toBe(true);
+  });
+});

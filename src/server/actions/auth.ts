@@ -1,12 +1,14 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "../db/client";
 import { hashPassword, passwordPolicyError, verifyPassword } from "../auth/password";
 import { clearFailures, isRateLimited, recordFailure } from "../auth/rate-limit";
-import { createSession, destroySession } from "../auth/session";
+import { createSession, destroySession, requireUser } from "../auth/session";
+import { users } from "../db/schema";
 import { createUserWithDefaults, findUserByEmail } from "../repositories/users";
 
 export type AuthState = { error?: string; fieldErrors?: Record<string, string> } | null;
@@ -67,6 +69,16 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
 }
 
 export async function logoutAction(): Promise<void> {
+  await destroySession();
+  redirect("/connexion");
+}
+
+/** Suppression définitive du compte et de toutes les données associées (suppression en cascade). */
+export async function deleteAccountAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const user = await requireUser();
+  const confirmation = String(formData.get("confirmEmail") ?? "").trim().toLowerCase();
+  if (confirmation !== user.email.toLowerCase()) return { error: "Saisissez exactement votre adresse e-mail pour confirmer." };
+  await db.delete(users).where(eq(users.id, user.id));
   await destroySession();
   redirect("/connexion");
 }

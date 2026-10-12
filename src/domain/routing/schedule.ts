@@ -81,6 +81,10 @@ export type ScheduleResult = {
   cost: number;
 };
 
+/** Les horaires calculés pour les visites non figées sont arrondis aux 5 minutes supérieures. */
+export const TIME_STEP = 5;
+const roundUp = (m: number) => Math.ceil(m / TIME_STEP - 1e-9) * TIME_STEP;
+
 export function simulateDay(input: {
   ctx: DayContext;
   stops: PlanStop[];
@@ -124,7 +128,7 @@ export function simulateDay(input: {
 
     const desired = (from: number) => {
       if (stop.fixedStart !== null) return stop.fixedStart;
-      return Math.max(from, stop.earliest ?? from);
+      return roundUp(Math.max(from, stop.earliest ?? from));
     };
     let start = desired(arrival);
 
@@ -176,8 +180,14 @@ export function simulateDay(input: {
     totalVisit += stop.durationMin;
     let departureFromStop = end + ctx.bufferMinutes;
 
-    // Déjeuner repoussé : pris juste après la visite
-    if (!lunch && end > latestLunchStart && stops.indexOf(stop) < stops.length - 1) {
+    // Déjeuner repoussé : pris juste après la visite, sauf s'il mettrait en retard
+    // le rendez-vous imposé suivant (la pause est alors signalée comme non protégée)
+    const nextStop = stops[stops.indexOf(stop) + 1];
+    const lunchWouldMakeLate =
+      nextStop?.fixedStart !== null &&
+      nextStop !== undefined &&
+      end + ctx.bufferMinutes + ctx.lunchMinutes + leg(stop.pointIndex, nextStop.pointIndex).min > nextStop.fixedStart!;
+    if (!lunch && end > latestLunchStart && nextStop && !lunchWouldMakeLate) {
       lunch = { start: end, end: end + ctx.lunchMinutes };
       departureFromStop = Math.max(departureFromStop, lunch.end);
       violations.push({

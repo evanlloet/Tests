@@ -46,6 +46,10 @@ END:VCALENDAR`;
 
 const now = new Date("2026-10-12T10:00:00Z");
 
+afterAll(async () => {
+  await testDb.$client.end();
+});
+
 describe("import du référentiel pharmacies", () => {
   beforeEach(resetDatabase);
 
@@ -88,9 +92,6 @@ describe("import du référentiel pharmacies", () => {
 
 describe("import Outlook et rapprochement", () => {
   beforeEach(resetDatabase);
-  afterAll(async () => {
-    await testDb.$client.end();
-  });
 
   async function setup() {
     const user = await createTestUser();
@@ -186,5 +187,27 @@ describe("import Outlook et rapprochement", () => {
     const res = await rematchOpenEvents(testDb, user);
     expect(res.auto_validated).toBe(1);
     expect(res.appointmentsCreated).toBe(1);
+  });
+});
+
+describe("suppression du compte", () => {
+  beforeEach(resetDatabase);
+
+  it("supprime en cascade toutes les données de l'utilisatrice, et seulement les siennes", async () => {
+    const a = await createTestUser("a@example.test");
+    const b = await createTestUser("b@example.test");
+    for (const u of [a, b]) {
+      await importPharmacyCsv(testDb, u.id, { name: "p.csv", bytes: bytes(PHARMACIES_CSV) });
+      await importCalendarFile(testDb, u, { name: "agenda.ics", bytes: bytes(ICS) }, { now });
+    }
+    const { users } = await import("@/server/db/schema");
+    await testDb.delete(users).where(eq(users.id, a.id));
+    const remaining = async (table: typeof pharmacies | typeof appointments | typeof calendarEvents | typeof appointmentMatches | typeof auditLogs) =>
+      (await testDb.select({ u: table.userId }).from(table)).map((r) => r.u);
+    for (const table of [pharmacies, appointments, calendarEvents, appointmentMatches, auditLogs]) {
+      const owners = await remaining(table);
+      expect(owners.length).toBeGreaterThan(0);
+      expect(owners.every((o) => o === b.id)).toBe(true);
+    }
   });
 });

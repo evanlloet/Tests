@@ -70,17 +70,24 @@ await page.waitForTimeout(3500);
 log("réimport :", (await page.locator("text=Inchangées").locator("..").innerText()).replace(/\n/g, " "));
 await shot("02-import-pharmacies");
 
-// 4. Import agenda ICS
+// 4. Import agenda ICS : prévisualisation puis confirmation
 await page.goto(`${BASE}/imports`);
 await page.setInputFiles("#file", `${DIR}test-agenda.ics`);
-await page.click("form button[type=submit]");
+await page.getByRole("button", { name: "1. Prévisualiser" }).click();
+await page.getByText("Prévisualisation (rien n'est encore enregistré)").waitFor({ timeout: 60000 });
+log("prévisualisation :", (await page.locator("text=Classement :").innerText()).replace(/\n/g, " "));
+await shot("03a-preview-agenda");
+await page.getByRole("button", { name: "2. Confirmer l'import" }).click();
 await page.getByText("Import terminé").waitFor({ timeout: 120000 });
 log("import agenda :", (await page.locator("text=Rapprochement avec les pharmacies").locator("..").innerText()).replace(/\n/g, " | "));
 await shot("03-import-agenda");
+// réimport du même fichier : aucun doublon
+await page.goto(`${BASE}/imports`);
 await page.setInputFiles("#file", `${DIR}test-agenda.ics`);
-await page.click("form button[type=submit]");
-await page.getByRole("button", { name: "Analyse en cours…" }).waitFor();
-await page.getByRole("button", { name: "Importer et analyser" }).waitFor({ timeout: 120000 });
+await page.getByRole("button", { name: "1. Prévisualiser" }).click();
+await page.getByText("Prévisualisation (rien n'est encore enregistré)").waitFor({ timeout: 60000 });
+await page.getByRole("button", { name: "2. Confirmer l'import" }).click();
+await page.getByText("Import terminé").waitFor({ timeout: 120000 });
 log("réimport agenda :", (await page.locator("text=Nouveaux").first().locator("../..").innerText()).replace(/\n/g, " "));
 
 // 5. Rapprochements : valider la première carte
@@ -105,9 +112,15 @@ await page.waitForURL(/prochaine-visite/);
 await shot("07-prochaine-visite");
 log("propositions :", await page.locator("ol > li").count());
 
-// 7. Planning semaine + jour
+// 7. Planning semaine + glisser-déposer (rendez-vous confirmé : boîte de confirmation acceptée)
 await page.goto(`${BASE}/planning`);
 await shot("08-planning-semaine");
+page.once("dialog", (d) => d.accept());
+const block = page.locator("a[draggable=true]").first();
+const columns = page.locator("[aria-label^='Colonne du']");
+await block.dragTo(columns.nth(1), { targetPosition: { x: 40, y: 500 } });
+await page.getByText("Rendez-vous déplacé").waitFor({ timeout: 15000 });
+log("glisser-déposer : rendez-vous déplacé");
 
 // 8. Tournée du jour avec visites (premier jour ouvré à venir ayant ≥ 3 visites)
 await page.goto(`${BASE}/`);
@@ -120,6 +133,30 @@ for (let i = 0; i < 10 && !tourDate; i++) {
 }
 log("tournée simulée pour", tourDate);
 await shot("10-tournee");
+// Simulation en autorisant le déplacement des rendez-vous confirmés, puis application
+{
+  const apply = page.getByRole("button", { name: "Appliquer ce scénario" });
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
+    await page.goto(`${BASE}/tournees?date=${d}&confirmes=deplacables`);
+    if ((await apply.count()) && (await page.getByText("Un meilleur ordre de passage est possible").count())) {
+      log("jour avec amélioration possible :", d);
+      break;
+    }
+  }
+  if (await apply.count()) {
+    await page.getByLabel(/J'ai vérifié le scénario/).check();
+    const second = page.getByLabel(/Je confirme le déplacement de/);
+    if (await second.count()) await second.check();
+    await apply.click();
+    await page.getByText(/Scénario (appliqué|enregistré)|Le planning a changé|Cochez|erreur/).first().waitFor({ timeout: 30000 });
+    await shot("10c-tournee-apres-application");
+    log("scénario appliqué :", await page.getByText(/Scénario (appliqué|enregistré)/).first().innerText());
+  } else {
+    log("aucun ordre différent proposé (rien à appliquer)");
+  }
+  await shot("10b-tournee-confirmes");
+}
 
 // 9. Carte
 await page.goto(`${BASE}/carte${tourDate ? `?date=${tourDate}` : ""}`);
@@ -129,6 +166,20 @@ await shot("11-carte");
 // 10. Pilotage
 await page.goto(`${BASE}/pilotage`);
 await shot("12-pilotage");
+
+// 10 bis. Export des données et persistance après déconnexion / reconnexion
+const exportRes = await page.request.get(`${BASE}/api/export`);
+const exported = await exportRes.json();
+log("export :", exportRes.status(), `${exported.pharmacies.length} pharmacies, ${exported.appointments.length} rendez-vous`);
+const before = exported.pharmacies.length;
+await page.goto(`${BASE}/profil`);
+await Promise.all([page.waitForURL(/connexion/), page.getByRole("button", { name: "Se déconnecter" }).click()]);
+await page.fill("#email", email);
+await page.fill("#password", "motdepasse123");
+await Promise.all([page.waitForURL(`${BASE}/`), page.click("button[type=submit]")]);
+const again = await (await page.request.get(`${BASE}/api/export`)).json();
+log("après reconnexion :", again.pharmacies.length === before ? "données intactes" : "DONNÉES MANQUANTES");
+if (again.pharmacies.length !== before) errors.push("Données perdues après reconnexion");
 
 // 11. Mobile
 const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: "fr-FR", timezoneId: "Europe/Paris" });

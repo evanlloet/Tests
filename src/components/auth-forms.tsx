@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { loginAction, signupAction, type AuthState } from "@/server/actions/auth";
+import { submitWithoutReset } from "./action-form";
 import { Button } from "./ui/button";
 import { Card, CardBody } from "./ui/card";
 import { Field, Input } from "./ui/form";
@@ -13,7 +14,7 @@ export function LoginForm() {
   return (
     <Card>
       <CardBody>
-        <form action={action} className="space-y-4">
+        <form action={action} onSubmit={submitWithoutReset(action)} className="space-y-4">
           <h1 className="text-lg font-semibold">Connexion</h1>
           {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
           <Field label="E-mail" htmlFor="email">
@@ -49,7 +50,7 @@ export function SignupForm({ enabled }: { enabled: boolean }) {
   return (
     <Card>
       <CardBody>
-        <form action={action} className="space-y-4">
+        <form action={action} onSubmit={submitWithoutReset(action)} className="space-y-4">
           <h1 className="text-lg font-semibold">Créer votre compte</h1>
           {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
           <Field label="Prénom" htmlFor="displayName">

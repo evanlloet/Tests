@@ -58,6 +58,86 @@ export function parseCalendarFile(bytes: Uint8Array, timezone: string, now = new
   );
 }
 
+export type CalendarPreview = {
+  format: "ics" | "outlook_csv";
+  encoding: string;
+  sourceEntries: number;
+  totalEvents: number;
+  alreadyImported: number;
+  probableDuplicates: number;
+  duplicatesInFile: number;
+  cancelled: number;
+  allDay: number;
+  classification: { visit: number; not_visit: number; unknown: number };
+  firstDay: string | null;
+  lastDay: string | null;
+  futureEvents: number;
+  warnings: string[];
+  sample: { when: string; title: string; location: string | null; classification: string; reason: string; status: "nouveau" | "déjà importé" | "doublon probable" }[];
+};
+
+/** Prévisualisation : lecture, normalisation et classement, sans rien enregistrer. */
+export async function previewCalendarFile(db: DbOrTx, user: ImportUser, bytes: Uint8Array, now = new Date()): Promise<CalendarPreview> {
+  const parsed = parseCalendarFile(bytes, user.timezone, now);
+  const seen = new Set<string>();
+  const unique = parsed.events.filter((e) => (seen.has(e.sourceKey) ? false : (seen.add(e.sourceKey), true)));
+  const known = new Set<string>();
+  const knownHashes = new Set<string>();
+  for (let i = 0; i < unique.length; i += 1000) {
+    const chunk = unique.slice(i, i + 1000);
+    const byKey = await db
+      .select({ k: calendarEvents.sourceKey })
+      .from(calendarEvents)
+      .where(and(eq(calendarEvents.userId, user.id), inArray(calendarEvents.sourceKey, chunk.map((e) => e.sourceKey))));
+    byKey.forEach((r) => known.add(r.k));
+    const byHash = await db
+      .select({ h: calendarEvents.contentHash })
+      .from(calendarEvents)
+      .where(and(eq(calendarEvents.userId, user.id), inArray(calendarEvents.contentHash, chunk.map((e) => e.contentHash))));
+    byHash.forEach((r) => knownHashes.add(r.h));
+  }
+  const classification = { visit: 0, not_visit: 0, unknown: 0 };
+  const rows = unique.map((e) => {
+    const c = classifyEvent(e);
+    classification[c.classification]++;
+    const status: CalendarPreview["sample"][number]["status"] = known.has(e.sourceKey)
+      ? "déjà importé"
+      : knownHashes.has(e.contentHash)
+        ? "doublon probable"
+        : "nouveau";
+    return { e, c, status };
+  });
+  const days = unique.map((e) => dayKeyOf(e.start, user.timezone)).sort();
+  const fmt = new Intl.DateTimeFormat("fr-FR", { timeZone: user.timezone, dateStyle: "medium", timeStyle: "short" });
+  return {
+    format: parsed.format,
+    encoding: parsed.encoding,
+    sourceEntries: parsed.sourceEntries,
+    totalEvents: unique.length,
+    alreadyImported: rows.filter((r) => r.status === "déjà importé").length,
+    probableDuplicates: rows.filter((r) => r.status === "doublon probable").length,
+    duplicatesInFile: parsed.events.length - unique.length,
+    cancelled: unique.filter((e) => e.isCancelled).length,
+    allDay: unique.filter((e) => e.allDay).length,
+    classification,
+    firstDay: days[0] ?? null,
+    lastDay: days.at(-1) ?? null,
+    futureEvents: unique.filter((e) => e.start > now).length,
+    warnings: parsed.warnings,
+    sample: rows
+      .filter((r) => r.status === "nouveau")
+      .slice(-15)
+      .map(({ e, c, status }) => ({
+        when: fmt.format(e.start),
+        title: e.title,
+        location: e.location,
+        classification: c.classification,
+        reason: c.reason,
+        status,
+      })),
+  };
+}
+
 /**
  * Importe un fichier de calendrier. L'opération est rejouable :
  * - un événement déjà importé (même clé) n'est jamais recréé ;
