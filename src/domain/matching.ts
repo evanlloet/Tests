@@ -278,6 +278,43 @@ export function applyDayContext(
   return adjusted.sort((a, b) => b.score - a.score);
 }
 
+/**
+ * Consensus d'une journée sans point d'ancrage : quand plusieurs rendez-vous du même
+ * jour sont ambigus, les candidats situés dans un département compatible avec TOUS
+ * les autres rendez-vous de la journée sont légèrement favorisés. L'ajustement est
+ * faible : il réordonne les propositions mais ne suffit pas à valider seul.
+ */
+export function applyDayConsensus(
+  dayCandidates: ScoredCandidate[][],
+  geo: Map<string, PharmacyGeo>,
+  departmentName: (code: string) => string = (c) => c,
+): ScoredCandidate[][] {
+  if (dayCandidates.length < 2) return dayCandidates;
+  const topDepartments = dayCandidates.map((cands) => {
+    const best = cands[0]?.score ?? 0;
+    return new Set(
+      cands
+        .filter((c) => c.score >= best - 0.05)
+        .map((c) => geo.get(c.pharmacyId)?.departmentCode)
+        .filter((d): d is string => Boolean(d)),
+    );
+  });
+  return dayCandidates.map((cands, i) => {
+    const others = topDepartments.filter((_, j) => j !== i);
+    if (others.some((set) => set.size === 0)) return cands;
+    const adjusted = cands.map((c) => {
+      const dept = geo.get(c.pharmacyId)?.departmentCode;
+      if (!dept || !others.every((set) => set.has(dept))) return c;
+      return {
+        ...c,
+        score: Math.min(0.97, Math.round((c.score + 0.06) * 1000) / 1000),
+        reasons: [...c.reasons, `Cohérent avec les ${others.length} autre(s) rendez-vous du jour, tous possibles en ${departmentName(dept)}`],
+      };
+    });
+    return adjusted.sort((a, b) => b.score - a.score);
+  });
+}
+
 /** Le meilleur candidat est-il quasiment à égalité avec le suivant ? */
 export function isAmbiguous(candidates: ScoredCandidate[]): boolean {
   const [best, second] = candidates;

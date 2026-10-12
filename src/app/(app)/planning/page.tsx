@@ -76,12 +76,12 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
           ))}
         </div>
         {templates.length ? (
-          <ActionForm action={assignWeekTemplateAction} className="flex items-center gap-2" feedback={false}>
+          <ActionForm action={assignWeekTemplateAction} className="flex w-full flex-wrap items-center gap-2 sm:w-auto" feedback={false}>
             <input type="hidden" name="weekStart" value={weekStart} />
             <label htmlFor="templateId" className="text-sm text-muted">
               Secteurs :
             </label>
-            <Select id="templateId" name="templateId" defaultValue={isOverride ? (active?.id ?? "") : ""} className="h-9 w-auto">
+            <Select id="templateId" name="templateId" defaultValue={isOverride ? (active?.id ?? "") : ""} className="h-9 w-auto min-w-0 flex-1 sm:flex-none">
               <option value="">Par défaut ({templates.find((t) => t.isDefault)?.name ?? "—"})</option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>

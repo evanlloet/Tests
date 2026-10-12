@@ -5,6 +5,7 @@ import { ActionForm, SubmitButton } from "@/components/action-form";
 import { MatchList, type MatchCardData } from "@/components/match-card";
 import { EmptyState } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { isAmbiguous } from "@/domain/matching";
 import { formatDateTime } from "@/domain/time";
 import { rematchAction, validateManyAction } from "@/server/actions/calendar";
 import { requireUser } from "@/server/auth/session";
@@ -61,7 +62,11 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
       candidates,
     };
   });
-  const bulkIds = filter === "to_review" ? rows.filter((r) => r.match.status === "pending" && r.match.pharmacyId).map((r) => r.match.id) : [];
+  // Validation groupée : uniquement les propositions sans égalité entre candidats
+  const bulkIds =
+    filter === "to_review"
+      ? rows.filter((r) => r.match.status === "pending" && r.match.pharmacyId && !isAmbiguous(r.match.candidates)).map((r) => r.match.id)
+      : [];
 
   return (
     <>
@@ -97,7 +102,10 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
           <SubmitButton variant="accent" pendingLabel="Validation…">
             Valider les {bulkIds.length} propositions de cette page
           </SubmitButton>
-          <p className="mt-1 text-xs text-muted">Valide la pharmacie proposée pour chaque carte affichée ci-dessous. Vérifiez-les avant.</p>
+          <p className="mt-1 text-xs text-muted">
+            Valide la pharmacie proposée pour les cartes non ambiguës de cette page ({cards.length - bulkIds.length} carte(s) ambiguë(s) ou sans
+            proposition restent à traiter une par une). Vérifiez-les avant.
+          </p>
         </ActionForm>
       ) : null}
 

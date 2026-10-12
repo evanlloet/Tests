@@ -106,3 +106,32 @@ describe("contexte de la journée et commune seule", () => {
     expect(applyDayContext(c, undefined, new Map())).toEqual(c);
   });
 });
+
+describe("consensus d'une journée sans ancrage", () => {
+  it("favorise le département compatible avec tous les autres rendez-vous ambigus du jour", async () => {
+    const { applyDayConsensus, isAmbiguous } = await import("./matching");
+    const idx = buildMatchIndex([
+      ph("centre-caen", "Pharmacie du Centre", "Caen", "14000"),
+      ph("centre-coutances", "Pharmacie du Centre", "Coutances", "50200"),
+      ph("gauthier-granville", "Pharmacie Gauthier", "Granville", "50400"),
+      ph("gauthier-evron", "Pharmacie Gauthier", "Évron", "53600"),
+      ph("perrin-granville", "Pharmacie Perrin", "Granville", "50400"),
+      ph("perrin-laval", "Pharmacie Perrin", "Laval", "53000"),
+    ]);
+    const dept: Record<string, string> = {
+      "centre-caen": "14",
+      "centre-coutances": "50",
+      "gauthier-granville": "50",
+      "gauthier-evron": "53",
+      "perrin-granville": "50",
+      "perrin-laval": "53",
+    };
+    const geo = new Map(Object.entries(dept).map(([id, d]) => [id, { departmentCode: d, location: null }]));
+    const day = ["Ph. Centre", "RDV Pharmacie Gauthier", "RDV Pharmacie Perrin"].map((t) => scoreCandidates({ title: t, location: null }, idx));
+    expect(day.every((c) => isAmbiguous(c))).toBe(true);
+    const adjusted = applyDayConsensus(day, geo);
+    expect(adjusted.map((c) => c[0]!.pharmacyId)).toEqual(["centre-coutances", "gauthier-granville", "perrin-granville"]);
+    // Réordonne sans valider seul
+    expect(adjusted.every((c) => decideMatch(c, 0.9).status === "pending")).toBe(true);
+  });
+});

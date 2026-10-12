@@ -6,7 +6,7 @@ import { looksLikeIcs, parseIcs } from "@/domain/calendar/ics";
 import { sha256 } from "@/domain/calendar/keys";
 import { CalendarFormatError, looksLikeOutlookCsv, parseOutlookCsv } from "@/domain/calendar/outlook-csv";
 import type { CalendarParseResult, ParsedCalendarEvent } from "@/domain/calendar/types";
-import { applyDayContext, buildMatchIndex, decideMatch, scoreCandidates, type DayContext, type MatchIndex, type PharmacyGeo } from "@/domain/matching";
+import { applyDayConsensus, applyDayContext, buildMatchIndex, decideMatch, scoreCandidates, type DayContext, type MatchIndex, type PharmacyGeo } from "@/domain/matching";
 import { dayKeyOf } from "@/domain/time";
 import type { Db, DbOrTx } from "../db/client";
 import { appointmentMatches, appointments, calendarEvents, calendarImports, pharmacies, territories, type CalendarEvent } from "../db/schema";
@@ -394,11 +394,25 @@ export async function matchEvents(
   for (const r of results) if (r.decision.status === "auto_validated") addToContext(r.day, r.decision.best!.pharmacyId);
 
   const names = await territoryNames(tx, user.id);
+  const deptName = (code: string) => names.get(code) ?? code;
   for (const r of results) {
     if (r.decision.status !== "pending") continue;
-    const adjusted = applyDayContext(r.candidates, contexts.get(r.day), geo, (code) => names.get(code) ?? code);
+    const adjusted = applyDayContext(r.candidates, contexts.get(r.day), geo, deptName);
     r.candidates = adjusted;
     r.decision = decideMatch(adjusted, user.autoMatchThreshold);
+  }
+  // Journées encore sans ancrage : consensus entre les rendez-vous ambigus du même jour
+  const pendingByDay = new Map<string, typeof results>();
+  for (const r of results) {
+    if (r.decision.status !== "pending" || contexts.has(r.day)) continue;
+    pendingByDay.set(r.day, [...(pendingByDay.get(r.day) ?? []), r]);
+  }
+  for (const group of pendingByDay.values()) {
+    const adjusted = applyDayConsensus(group.map((r) => r.candidates), geo, deptName);
+    group.forEach((r, i) => {
+      r.candidates = adjusted[i]!;
+      r.decision = decideMatch(r.candidates, user.autoMatchThreshold);
+    });
   }
 
   for (const { event, candidates, decision } of results) {
