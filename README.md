@@ -146,6 +146,19 @@ Aucun secret n'est envoyé au navigateur. Les clés éventuelles (OSRM privé, e
 5. **Pilotage** : vérifier l'historique reconstruit (secteurs par jour, fréquences, journées lointaines).
 6. Compléter les catégories ABCD manquantes : sans catégorie, aucune échéance n'est calculée (rien n'est deviné).
 
+### Essayer sans le vrai agenda : agenda Outlook fictif
+
+```bash
+npm run agenda:fictif -- chemin/vers/CLIENTS.xlsx   # écrit agenda-fictif.ics
+```
+
+Génère ~2 ans d'historique et 6 semaines à venir de rendez-vous **inventés** pour les clientes du fichier, selon les
+jours de secteur de Léa (semaine principale, et une semaine sur trois la « Variante Orne / Mayenne »), les fréquences
+A/B/C/D et la date de prochaine visite du fichier, avec des congés, des réunions et des titres variés comme dans un
+vrai Outlook. Les journées regroupent des clientes proches mais dans un ordre non optimisé, pour voir la simulation de
+tournée à l'œuvre. À importer dans un **compte de test** : les visites fictives se mélangeraient sinon à l'historique
+réel.
+
 ### Format du CSV des pharmacies
 
 Séparateur `;` `,` ou tabulation, UTF-8 ou Windows-1252 (Excel). En-têtes reconnus sans tenir compte des accents
