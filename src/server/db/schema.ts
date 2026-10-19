@@ -532,6 +532,29 @@ export const favoritePlaces = pgTable("favorite_places", {
 });
 
 /**
+ * Retours sur les propositions de l'assistant de planification : journées acceptées
+ * ou refusées (et pourquoi), clientes retirées ou reportées. L'assistant en tient
+ * compte pour ses propositions suivantes (voir domain/assistant/learning).
+ */
+export const assistantFeedback = pgTable(
+  "assistant_feedback",
+  {
+    id: id(),
+    userId: userRef(),
+    kind: text("kind", { enum: ["day", "client_day", "client_snooze"] }).notNull(),
+    action: text("action", { enum: ["accepted", "rejected"] }).notNull(),
+    day: date("day"),
+    weekday: smallint("weekday"),
+    departmentCode: text("department_code"),
+    pharmacyId: uuid("pharmacy_id").references(() => pharmacies.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull(),
+    until: date("until"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("assistant_feedback_user_idx").on(t.userId, t.createdAt)],
+);
+
+/**
  * Cache des trajets routiers calculés par le moteur d'itinéraires (IGN, OSRM) :
  * évite de redemander les mêmes trajets. Coordonnées arrondies à ~10 m.
  * Ce sont des données routières, pas des données personnelles.

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CalendarDays, FileUp, GitCompareArrows, Home, Map, Phone, PieChart, Route, Store, Trophy, UserRound } from "lucide-react";
+import { BarChart3, CalendarDays, FileUp, GitCompareArrows, Home, Map, Phone, PieChart, Route, Sparkles, Store, Trophy, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -15,6 +15,7 @@ const PRIMARY = [
 ];
 
 const SECONDARY = [
+  { href: "/assistant", label: "Assistant", icon: Sparkles },
   { href: "/recompenses", label: "Récompenses", icon: Trophy, gamification: true },
   { href: "/tournees", label: "Tournées", icon: Route },
   { href: "/statistiques", label: "Statistiques", icon: PieChart },
@@ -89,5 +90,21 @@ export function BottomNav() {
         })}
       </ul>
     </nav>
+  );
+}
+
+/** Bouton flottant (mobile) : l'assistant de planification est toujours à portée de main. */
+export function AssistantFab() {
+  const pathname = usePathname();
+  if (pathname.startsWith("/assistant")) return null;
+  return (
+    <Link
+      href="/assistant"
+      aria-label="Assistant de planification"
+      className="buddy-hover fixed right-4 bottom-24 z-40 flex items-center gap-2 rounded-full border border-border/70 bg-surface/95 py-1.5 pr-4 pl-1.5 text-sm font-bold shadow-[0_8px_30px_rgb(23_19_43/0.18)] backdrop-blur lg:hidden"
+    >
+      <Buddy mood="joy" shape="flower" color="yellow" size={36} />
+      Assistant
+    </Link>
   );
 }

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { BottomNav, SidebarNav } from "@/components/app-nav";
+import { AssistantFab, BottomNav, SidebarNav } from "@/components/app-nav";
 import { requireUser } from "@/server/auth/session";
 import { countPendingMatches } from "@/server/repositories/matches";
 
@@ -14,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <SidebarNav pendingMatches={pending} displayName={user.displayName} gamification={user.gamificationEnabled} levelName={null} />
       </aside>
       <main className="mx-auto w-full max-w-6xl px-4 pt-5 pb-32 sm:px-6 lg:px-8 lg:pt-8 lg:pb-12">{children}</main>
+      <AssistantFab />
       <BottomNav />
     </div>
   );

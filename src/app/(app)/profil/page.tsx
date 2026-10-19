@@ -90,6 +90,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           <nav className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4 text-sm lg:hidden" aria-label="Autres écrans">
             {[
               ...(user.gamificationEnabled ? [["/recompenses", "Récompenses"]] : []),
+              ["/assistant", "Assistant"],
               ["/statistiques", "Statistiques"],
               ["/tournees", "Tournées"],
               ["/imports", "Imports Outlook"],

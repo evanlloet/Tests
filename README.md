@@ -177,6 +177,26 @@ réel.
 - Les titres de CRM « KC - Visite : <raison sociale> - <CP> <ville> » sont reconnus comme visites et rapprochés par
   raison sociale + code postal ; « KC - Tâche : … » sont classés comme tâches.
 
+### Assistant de planification (écran « Assistant », bouton flottant sur mobile)
+
+L'assistant propose le planning des 1 à 3 prochains mois, journée par journée, et explique chaque choix.
+Il fonctionne sans service externe (calcul déterministe : mêmes données, même plan).
+
+- **Ce qu'il apprend de l'agenda** (12 derniers mois) : secteurs de chaque jour de la semaine (la semaine type sert
+  d'a priori), nombre de visites par journée, heures de début et de fin, durée des visites, soirs passés à l'hôtel et
+  hôtel habituel de chaque département.
+- **Ce qu'il apprend de vos réponses** : journée acceptée (« Ajouter au planning » crée des rendez-vous « proposés »,
+  à confirmer avec les pharmacies), refusée (autre secteur, pas de terrain ce jour-là, journée trop chargée), cliente
+  retirée (ne reçoit pas ce jour de la semaine, trop tôt → reportée de 30 jours). Les réponses récentes comptent plus
+  (demi-vie 90 jours) ; « Oublier mes retours » repart des seules habitudes.
+- **Comment il construit une journée** : jours fériés, congés, séminaires et télétravail exclus ; une journée déjà
+  entamée est complétée autour de ses rendez-vous ; sinon le secteur combine habitude, clientes dues et retours, en
+  vérifiant que la journée peut être bien remplie. Les clientes sont choisies par priorité (catégorie × retard, date de
+  prochaine visite du fichier clients) autour du groupe le plus dense, avec des horaires indicatifs.
+- **Recommandations** : clientes A/B en retard impossibles à placer, nuits d'hôtel à prévoir entre deux journées
+  lointaines (hôtel habituel du secteur ; les nuits déjà réservées sont reprises telles quelles), journées à compléter,
+  rendez-vous trop rapprochés de la visite précédente, départements sous-représentés.
+
 ### Format du CSV des pharmacies
 
 Séparateur `;` `,` ou tabulation, UTF-8 ou Windows-1252 (Excel). En-têtes reconnus sans tenir compte des accents

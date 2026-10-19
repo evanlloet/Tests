@@ -127,6 +127,15 @@ export default async function TodayPage() {
         ) : null}
       </header>
 
+      <Link href="/assistant" className="flex items-center gap-3 rounded-[24px] border border-border/70 bg-surface p-3 shadow-card transition-shadow hover:shadow-lg">
+        <Sparkles className="size-6 shrink-0 text-primary" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">Planifier les prochaines semaines avec l&apos;assistant</span>
+          <span className="block text-sm text-muted">Secteurs, clientes à voir, nuits d&apos;hôtel : proposé d&apos;après vos habitudes.</span>
+        </span>
+        <ArrowRight className="size-5 shrink-0 text-muted" aria-hidden />
+      </Link>
+
       {/* Humeur de la semaine */}
       <nav aria-label="Humeur des prochains jours" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
         {week
