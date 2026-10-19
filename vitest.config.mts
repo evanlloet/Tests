@@ -21,6 +21,8 @@ export default defineConfig({
       // Les services utilisent le client partagé : il pointe sur la base de test.
       DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://lea:lea@localhost:5432/lea_test",
       OSRM_URL: "",
+      // Pas d'appel réseau pendant les tests : estimation à vol d'oiseau
+      ROUTING_PROVIDER: "estimate",
     },
   },
 });

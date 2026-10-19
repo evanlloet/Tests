@@ -1,13 +1,13 @@
 import "server-only";
 import type { LatLng } from "@/domain/geo";
-import type { TravelMatrix, TravelProvider } from "@/domain/routing/types";
+import type { LegResult, RoadRouter } from "./types";
 
 /**
  * Fournisseur OSRM (Open Source Routing Machine). Nécessite un serveur OSRM
  * accessible (OSRM_URL). Le serveur de démonstration public n'est pas destiné à
- * un usage en production.
+ * un usage intensif ; un serveur dédié (ou l'IGN) est préférable.
  */
-export function createOsrmProvider(baseUrl: string, options: { timeoutMs?: number; profile?: string } = {}): TravelProvider {
+export function createOsrmRouter(baseUrl: string, options: { timeoutMs?: number; profile?: string } = {}): RoadRouter {
   const base = baseUrl.replace(/\/+$/, "");
   const profile = options.profile ?? "driving";
   const timeoutMs = options.timeoutMs ?? 8000;
@@ -22,19 +22,29 @@ export function createOsrmProvider(baseUrl: string, options: { timeoutMs?: numbe
   }
 
   return {
-    info: { id: "osrm", label: "Itinéraires routiers (OSRM)", isRealRouting: true, disclaimer: null },
-    async matrix(points): Promise<TravelMatrix> {
-      if (points.length < 2) return { distancesKm: [[0]], durationsMin: [[0]] };
+    id: "osrm",
+    label: "Itinéraires routiers (OSRM)",
+    async legs(pairs) {
+      if (pairs.length === 0) return [];
+      // Une seule requête « table » pour tous les points distincts
+      const keyOf = (p: LatLng) => `${p.lat},${p.lng}`;
+      const unique = new Map<string, LatLng>();
+      for (const [a, b] of pairs) {
+        unique.set(keyOf(a), a);
+        unique.set(keyOf(b), b);
+      }
+      const points = [...unique.values()];
+      const index = new Map(points.map((p, i) => [keyOf(p), i]));
       const body = await call<{ distances: (number | null)[][]; durations: (number | null)[][] }>(
         `/table/v1/${profile}/${coords(points)}?annotations=distance,duration`,
       );
-      if (body.distances.some((row) => row.some((v) => v === null))) {
-        throw new Error("OSRM n'a pas trouvé d'itinéraire pour certains points");
-      }
-      return {
-        distancesKm: body.distances.map((row) => row.map((m) => (m ?? 0) / 1000)),
-        durationsMin: body.durations.map((row) => row.map((s) => (s ?? 0) / 60)),
-      };
+      return pairs.map(([a, b]): LegResult | null => {
+        const i = index.get(keyOf(a))!;
+        const j = index.get(keyOf(b))!;
+        const m = body.distances[i]?.[j];
+        const s = body.durations[i]?.[j];
+        return m == null || s == null ? null : { km: m / 1000, minutes: s / 60 };
+      });
     },
     async routeGeometry(points) {
       if (points.length < 2) return null;
