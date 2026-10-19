@@ -9,7 +9,7 @@
  * Chaque candidat est accompagné des raisons qui expliquent son score.
  */
 import { haversineKm, type LatLng } from "./geo";
-import { agendaTokens, normalizeCity, pharmacyNameTokens, setSimilarity, trigrams } from "./text";
+import { agendaTokens, normalizeCity, normalizeText, pharmacyNameTokens, setSimilarity, trigrams } from "./text";
 
 export type MatchablePharmacy = {
   id: string;
@@ -17,6 +17,8 @@ export type MatchablePharmacy = {
   city: string | null;
   postalCode: string | null;
   addressLine: string | null;
+  /** Raison sociale (« SELARL PHIE DU PARC »), souvent reprise telle quelle dans l'agenda */
+  legalName?: string | null;
 };
 
 export type MatchableEvent = {
@@ -56,6 +58,8 @@ export type MatchIndex = {
   byCity: Map<string, number[]>;
   /** Vocabulaire pour la tolérance aux fautes, regroupé par première lettre */
   fuzzyVocab: Map<string, { token: string; grams: Set<string> }[]>;
+  /** raison sociale normalisée → pharmacies */
+  byLegalName: Map<string, number[]>;
 };
 
 export function buildMatchIndex(pharmacies: MatchablePharmacy[]): MatchIndex {
@@ -63,7 +67,10 @@ export function buildMatchIndex(pharmacies: MatchablePharmacy[]): MatchIndex {
   const byToken = new Map<string, number[]>();
   const cityOnly = new Map<string, number[]>();
   const byCity = new Map<string, number[]>();
+  const byLegalName = new Map<string, number[]>();
   const entries = pharmacies.map((pharmacy, idx) => {
+    const legal = normalizeText(pharmacy.legalName);
+    if (legal.split(" ").length >= 2) byLegalName.set(legal, [...(byLegalName.get(legal) ?? []), idx]);
     const cityPhrase = normalizeCity(pharmacy.city);
     const cityTokens = cityPhrase ? cityPhrase.split(" ").filter((t) => t.length > 1) : [];
     // Le nom peut contenir la commune (« Pharmacie de Bayeux ») : ces jetons comptent comme commune.
@@ -82,7 +89,7 @@ export function buildMatchIndex(pharmacies: MatchablePharmacy[]): MatchIndex {
     bucket.push({ token, grams: trigrams(token) });
     fuzzyVocab.set(token[0]!, bucket);
   }
-  return { entries, tokenFrequency, size: pharmacies.length, byToken, cityOnly, byCity, fuzzyVocab };
+  return { entries, tokenFrequency, size: pharmacies.length, byToken, cityOnly, byCity, fuzzyVocab, byLegalName };
 }
 
 /** Poids d'un jeton : 1 pour un mot rare, plus faible pour un mot présent dans beaucoup de noms. */
@@ -215,6 +222,27 @@ export function scoreCandidates(event: MatchableEvent, index: MatchIndex, option
     }
     score = Math.min(1, Math.round(score * 1000) / 1000);
     if (score >= 0.3) out.push({ pharmacyId: pharmacy.id, score, reasons });
+  }
+
+  // Raison sociale complète dans le titre (« KC - Visite : SELARL PHIE DU PARC - 14000 CAEN ») :
+  // indice le plus fort, surtout si le code postal concorde.
+  if (index.byLegalName.size) {
+    const legalText = ` ${normalizeText(text)} `;
+    for (const [legal, idxs] of index.byLegalName) {
+      if (!legalText.includes(` ${legal} `)) continue;
+      for (const i of idxs) {
+        const pharmacy = index.entries[i]!.pharmacy;
+        const postalOk = pharmacy.postalCode ? postalCodes.has(pharmacy.postalCode) : false;
+        if (postalCodes.size && !postalOk && idxs.length > 1) continue;
+        const legalScore = postalOk ? 1 : postalCodes.size ? 0.8 : 0.9;
+        const existing = out.find((c) => c.pharmacyId === pharmacy.id);
+        const reason = postalOk ? "Raison sociale et code postal identiques" : "Raison sociale identique";
+        if (existing) {
+          existing.score = Math.max(existing.score, legalScore);
+          existing.reasons.unshift(reason);
+        } else out.push({ pharmacyId: pharmacy.id, score: legalScore, reasons: [reason] });
+      }
+    }
   }
   return out.sort((a, b) => b.score - a.score).slice(0, 6);
 }

@@ -1,4 +1,4 @@
-import { AlertTriangle, Car, Check } from "lucide-react";
+import { AlertTriangle, Car, Check, Phone } from "lucide-react";
 import Link from "next/link";
 import { APPOINTMENT_STATUS } from "@/components/labels";
 import { DayBuddy } from "@/components/mood-ui";
@@ -76,6 +76,11 @@ export function DayList({ day, showHeader = true }: { day: PlanningDay; showHead
                     <span className="flex items-center gap-1.5">
                       <span className={cn("truncate font-semibold", done && "line-through decoration-2")}>{a.title}</span>
                       {a.kind === "visit" ? <CategoryBadge category={a.category} /> : null}
+                      {a.mode === "phone" ? (
+                        <Badge tone="warning">
+                          <Phone className="size-3" aria-hidden /> Tél.
+                        </Badge>
+                      ) : null}
                     </span>
                     <span className="block truncate text-xs text-muted">{a.pharmacy?.city ?? (a.kind === "unavailable" ? "Indisponible" : "")}</span>
                   </span>

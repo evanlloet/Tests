@@ -99,6 +99,15 @@ export function CalendarImportForm() {
                 </ul>
               </div>
             </div>
+            {r.phoneToReview ? (
+              <Notice tone="warning" title={`${r.phoneToReview} rendez-vous téléphonique(s) à valider`}>
+                Ces rendez-vous ne peuvent pas être des visites sur place (trajet impossible, rendez-vous isolé, télétravail…). Confirmez-les pour
+                qu&apos;ils sortent des trajets et des tournées.{" "}
+                <Link href="/telephone" className="font-semibold underline">
+                  Valider les rendez-vous téléphoniques →
+                </Link>
+              </Notice>
+            ) : null}
             {r.warnings.length ? (
               <details className="rounded-2xl border border-border p-3 text-sm">
                 <summary className="cursor-pointer font-medium">{r.warnings.length} remarque(s)</summary>
@@ -116,8 +125,8 @@ export function CalendarImportForm() {
               <Link href={`/imports/${r.importId}`} className="text-primary underline-offset-4 hover:underline">
                 Détail des événements →
               </Link>
-              <Link href="/pilotage" className="text-primary underline-offset-4 hover:underline">
-                Analyse de l&apos;historique →
+              <Link href="/statistiques" className="text-primary underline-offset-4 hover:underline">
+                Statistiques du secteur →
               </Link>
             </div>
           </CardBody>

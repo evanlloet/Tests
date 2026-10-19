@@ -7,7 +7,7 @@ import { simulateDay, type DayContext, type PlanStop, type ScheduleResult } from
 import type { TravelMatrix, TravelProviderInfo } from "@/domain/routing/types";
 import { bestSlotInDay } from "@/domain/scheduling/suggest";
 import { addDays, minutesOfDay, parseHHmm, zonedDateTime, type DayKey } from "@/domain/time";
-import { computeTravel } from "@/integrations/routing";
+import { computeTravel } from "./travel";
 import type { SessionUser } from "../auth/session";
 import type { Db } from "../db/client";
 import { appointments, favoritePlaces, pharmacyPreferences, routePlans, routeStops, travelPreferences } from "../db/schema";
@@ -106,8 +106,11 @@ export async function simulateDayPlan(
   const from = zonedDateTime(day, "00:00", user.timezone);
   const to = zonedDateTime(addDays(day, 1), "00:00", user.timezone);
   const all = await listAppointmentsInRange(db, user.id, from, to);
-  const visits = all.filter((a) => a.appointment.kind === "visit" && a.pharmacy);
+  // Les rendez-vous téléphoniques restent à leur horaire et n'entrent pas dans la tournée
+  const visits = all.filter((a) => a.appointment.kind === "visit" && a.pharmacy && a.appointment.mode !== "phone");
   if (visits.length === 0) return null;
+  const phoneCount = all.filter((a) => a.appointment.kind === "visit" && a.appointment.mode === "phone").length;
+  if (phoneCount) warnings.push(`${phoneCount} rendez-vous téléphonique(s) ce jour-là : ils ne sont pas dans la tournée.`);
   if (all.some((a) => a.appointment.kind === "unavailable")) {
     warnings.push("Une indisponibilité est prévue ce jour-là : elle n'est pas prise en compte par l'optimisation, vérifiez les horaires proposés.");
   }
@@ -125,7 +128,7 @@ export async function simulateDayPlan(
   // Points : visites, puis départ, puis arrivée
   const points: (LatLng | null)[] = [...located.map((a) => ({ lat: a.pharmacy!.lat!, lng: a.pharmacy!.lng! })), start.location, end.location];
   const realPoints = points.filter((p): p is LatLng => p !== null);
-  const travelRes = await computeTravel(realPoints, estimate);
+  const travelRes = await computeTravel(db, realPoints, estimate);
   let matrix = travelRes.matrix;
   // Réindexe si départ/arrivée sans coordonnées (nœud virtuel à distance nulle)
   let startIndex = located.length;

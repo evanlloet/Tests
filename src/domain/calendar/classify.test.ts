@@ -31,3 +31,11 @@ describe("classement des événements", () => {
     expect(classifyEvent(ev("Réunion pharmacie du Centre")).classification).toBe("visit");
   });
 });
+
+describe("formats de CRM (« KC - … »)", () => {
+  it("classe « KC - Visite » comme une visite et « KC - Tâche » comme autre chose", () => {
+    expect(classifyEvent(ev("KC - Visite : SELARL PHIE DU PARC - 14000 CAEN")).classification).toBe("visit");
+    expect(classifyEvent(ev("KC - Tâche : Divers")).classification).toBe("not_visit");
+    expect(classifyEvent(ev("KC - Tâche : VCA / TAD", { end: new Date("2026-06-15T15:00:00Z") })).reason).toBe("Télétravail");
+  });
+});

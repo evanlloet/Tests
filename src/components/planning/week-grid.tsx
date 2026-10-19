@@ -34,7 +34,10 @@ export const LOAD_STYLE: Record<PlanningDay["load"], string> = {
 export function AppointmentChip({ a, compact = false }: { a: PlanningAppointment; compact?: boolean }) {
   return (
     <span className="flex min-w-0 flex-col">
-      <span className="truncate text-xs font-semibold">{a.title}</span>
+      <span className="truncate text-xs font-semibold">
+        {a.mode === "phone" ? <span aria-label="Par téléphone">📞 </span> : null}
+        {a.title}
+      </span>
       {!compact ? (
         <span className="truncate text-[11px] opacity-80">
           {formatHHmm(a.start)}–{formatHHmm(a.end)}

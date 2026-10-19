@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CalendarDays, FileUp, GitCompareArrows, Home, Map, Route, Store, Trophy, UserRound } from "lucide-react";
+import { BarChart3, CalendarDays, FileUp, GitCompareArrows, Home, Map, Phone, PieChart, Route, Store, Trophy, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -17,7 +17,9 @@ const PRIMARY = [
 const SECONDARY = [
   { href: "/recompenses", label: "Récompenses", icon: Trophy, gamification: true },
   { href: "/tournees", label: "Tournées", icon: Route },
+  { href: "/statistiques", label: "Statistiques", icon: PieChart },
   { href: "/imports", label: "Imports Outlook", icon: FileUp },
+  { href: "/telephone", label: "RDV téléphoniques", icon: Phone },
   { href: "/rapprochements", label: "Rapprochements", icon: GitCompareArrows },
   { href: "/pilotage", label: "Pilotage", icon: BarChart3 },
 ];

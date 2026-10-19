@@ -135,3 +135,22 @@ describe("consensus d'une journée sans ancrage", () => {
     expect(adjusted.every((c) => decideMatch(c, 0.9).status === "pending")).toBe(true);
   });
 });
+
+describe("rapprochement par raison sociale (titres de CRM)", () => {
+  const withLegal = buildMatchIndex([
+    { id: "parc", name: "Pharmacie du Parc", city: "Caen", postalCode: "14000", addressLine: null, legalName: "SELARL PHIE DU PARC" },
+    { id: "parc-lisieux", name: "Pharmacie du Parc", city: "Lisieux", postalCode: "14100", addressLine: null, legalName: "SELARL PHIE DU PARC" },
+    { id: "hirondelle", name: "Pharmacie de l'Hirondelle", city: "Vire", postalCode: "14500", addressLine: null, legalName: "SARL PHIE MARTINEAU" },
+  ]);
+  it("retient la raison sociale accompagnée du bon code postal", () => {
+    const c = scoreCandidates({ title: "KC - Visite : SELARL PHIE DU PARC - 14100 LISIEUX", location: null }, withLegal);
+    expect(c[0]!.pharmacyId).toBe("parc-lisieux");
+    expect(c[0]!.score).toBe(1);
+    expect(decideMatch(c, 0.9).status).toBe("auto_validated");
+  });
+  it("retrouve une pharmacie dont le nom d'enseigne diffère de la raison sociale", () => {
+    const c = scoreCandidates({ title: "KC - Visite : SARL PHIE MARTINEAU - 14500 VIRE", location: null }, withLegal);
+    expect(c[0]!.pharmacyId).toBe("hirondelle");
+    expect(c[0]!.reasons[0]).toMatch(/Raison sociale/);
+  });
+});

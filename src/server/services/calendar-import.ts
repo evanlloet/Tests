@@ -12,6 +12,7 @@ import type { Db, DbOrTx } from "../db/client";
 import { appointmentMatches, appointments, calendarEvents, calendarImports, pharmacies, territories, type CalendarEvent } from "../db/schema";
 import { logAudit } from "../repositories/audit";
 import { listForMatching } from "../repositories/pharmacies";
+import { detectPhoneAppointments } from "./phone-review";
 
 export type ImportUser = {
   id: string;
@@ -36,6 +37,8 @@ export type CalendarImportSummary = {
   matches: { auto_validated: number; pending: number; no_candidate: number };
   appointmentsCreated: number;
   appointmentsUpdated: number;
+  /** Rendez-vous détectés comme téléphoniques, en attente de validation */
+  phoneToReview: number;
   warnings: string[];
   firstDay: string | null;
   lastDay: string | null;
@@ -296,6 +299,10 @@ export async function importCalendarFile(
     }
 
     const days = unique.map((e) => dayKeyOf(e.start, user.timezone)).sort();
+    const times = unique.map((e) => e.start.getTime());
+    const phone = unique.length
+      ? await detectPhoneAppointments(tx, user, { from: new Date(Math.min(...times) - 86_400_000), to: new Date(Math.max(...times) + 86_400_000) })
+      : { pending: 0 };
     const summary: CalendarImportSummary = {
       importId,
       format: parsed.format,
@@ -312,6 +319,7 @@ export async function importCalendarFile(
       matches: matchCounts,
       appointmentsCreated,
       appointmentsUpdated,
+      phoneToReview: phone.pending,
       warnings: parsed.warnings,
       firstDay: days[0] ?? null,
       lastDay: days.at(-1) ?? null,

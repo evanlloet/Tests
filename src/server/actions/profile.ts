@@ -12,6 +12,7 @@ import { db } from "../db/client";
 import { favoritePlaces, territories, travelPreferences, users } from "../db/schema";
 import { logAudit } from "../repositories/audit";
 import { assignWeekTemplate, setDefaultTemplate, setTemplateDay } from "../repositories/territories";
+import { testRouting } from "../services/travel";
 import { toActionError, type ActionResult } from "./result";
 
 const hhmm = z.string().regex(/^\d{2}:\d{2}$/, "Heure au format HH:MM.");
@@ -221,4 +222,14 @@ export async function setGamificationAction(formData: FormData): Promise<void> {
   await db.update(users).set({ gamificationEnabled: enabled }).where(eq(users.id, user.id));
   await logAudit(db, { userId: user.id, entity: "user_settings", entityId: user.id, action: "gamification", after: { enabled } });
   revalidatePath("/", "layout");
+}
+
+/** Vérifie que le moteur d'itinéraires répond depuis ce serveur (trajet témoin Rennes → Caen). */
+export async function testRoutingAction(): Promise<ActionResult> {
+  await requireUser();
+  const r = await testRouting();
+  revalidatePath("/profil");
+  return r.ok
+    ? { ok: true, message: `${r.label} : Rennes → Caen = ${Math.round(r.km)} km, ${Math.round(r.minutes)} min. Les tournées utilisent ces trajets routiers.` }
+    : { ok: false, error: `Le moteur ne répond pas (${r.error}). Les trajets restent estimés à vol d'oiseau.` };
 }

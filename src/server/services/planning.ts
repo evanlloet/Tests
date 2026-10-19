@@ -15,6 +15,7 @@ export type PlanningAppointment = {
   id: string;
   title: string;
   kind: Appointment["kind"];
+  mode: Appointment["mode"];
   status: Appointment["status"];
   outcome: Appointment["outcome"];
   source: Appointment["source"];
@@ -71,6 +72,7 @@ export async function getPlanning(db: Db, user: SessionUser, from: DayKey, to: D
         id: a.appointment.id,
         title: a.pharmacy?.name ?? a.appointment.title,
         kind: a.appointment.kind,
+        mode: a.appointment.mode,
         status: a.appointment.status,
         outcome: a.appointment.outcome,
         source: a.appointment.source,
@@ -89,8 +91,10 @@ export async function getPlanning(db: Db, user: SessionUser, from: DayKey, to: D
     const visitMinutes = visits.reduce((n, a) => n + (a.end - a.start), 0);
     let driveMinutes: number | null = null;
     let driveKm: number | null = null;
-    const located = visits.filter((a) => a.pharmacy && hasLocation(a.pharmacy));
-    if (home && visits.length > 0 && located.length === visits.length) {
+    // Les rendez-vous téléphoniques ne génèrent pas de trajet
+    const onsite = visits.filter((a) => a.mode !== "phone");
+    const located = onsite.filter((a) => a.pharmacy && hasLocation(a.pharmacy));
+    if (home && onsite.length > 0 && located.length === onsite.length) {
       driveMinutes = 0;
       driveKm = 0;
       let pos = home;
@@ -114,7 +118,7 @@ export async function getPlanning(db: Db, user: SessionUser, from: DayKey, to: D
     const holiday = publicHolidayName(day);
     if (holiday && visits.length) warnings.push(`Jour férié (${holiday})`);
     const sectorCodes = new Set(pref?.departments ?? []);
-    const offSector = visits.filter((v) => v.pharmacy?.departmentCode && sectorCodes.size && !sectorCodes.has(v.pharmacy.departmentCode));
+    const offSector = onsite.filter((v) => v.pharmacy?.departmentCode && sectorCodes.size && !sectorCodes.has(v.pharmacy.departmentCode));
     if (offSector.length) warnings.push(`${offSector.length} visite(s) hors du secteur prévu`);
 
     const overlaps = list.some((a) => a.overlaps);

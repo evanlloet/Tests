@@ -2,9 +2,6 @@ import "server-only";
 import { createIgnRouter } from "./ign";
 import { createOsrmRouter } from "./osrm";
 import type { RoadRouter } from "./types";
-import type { LatLng } from "@/domain/geo";
-import { createEstimateProvider, type EstimateParams } from "@/domain/routing/estimate";
-import type { TravelMatrix, TravelProviderInfo } from "@/domain/routing/types";
 
 export type { LegResult, RoadRouter } from "./types";
 
@@ -62,43 +59,3 @@ export function routingStatus(): { configured: boolean; label: string; lastSucce
   };
 }
 
-export type MatrixResult = {
-  matrix: TravelMatrix;
-  provider: TravelProviderInfo;
-  geometry: [number, number][] | null;
-  /** Renseigné si le moteur configuré a échoué et que l'estimation a pris le relais */
-  fallbackReason: string | null;
-};
-
-/**
- * Matrice de trajets entre points : moteur routier s'il répond, sinon estimation à
- * vol d'oiseau (toujours présentée comme telle). Un trajet non calculé par le moteur
- * est complété par l'estimation.
- */
-export async function computeTravel(points: LatLng[], estimate: EstimateParams, withGeometry = false): Promise<MatrixResult> {
-  const fallback = createEstimateProvider(estimate);
-  const estimated = await fallback.matrix(points);
-  const router = roadRouter();
-  if (!router || !routerAvailable()) {
-    return { matrix: estimated, provider: fallback.info, geometry: null, fallbackReason: router ? "Le moteur d'itinéraires est momentanément indisponible." : null };
-  }
-  try {
-    const pairs: [LatLng, LatLng][] = [];
-    for (const a of points) for (const b of points) pairs.push([a, b]);
-    const legs = await router.legs(pairs);
-    const matrix: TravelMatrix = { distancesKm: estimated.distancesKm.map((r) => [...r]), durationsMin: estimated.durationsMin.map((r) => [...r]) };
-    legs.forEach((leg, k) => {
-      if (!leg) return;
-      const i = Math.floor(k / points.length);
-      const j = k % points.length;
-      matrix.distancesKm[i]![j] = leg.km;
-      matrix.durationsMin[i]![j] = leg.minutes;
-    });
-    reportRouting(true);
-    const geometry = withGeometry ? await router.routeGeometry(points).catch(() => null) : null;
-    return { matrix, provider: { id: router.id, label: router.label, isRealRouting: true, disclaimer: null }, geometry, fallbackReason: null };
-  } catch (err) {
-    reportRouting(false, (err as Error).message);
-    return { matrix: estimated, provider: fallback.info, geometry: null, fallbackReason: `Le moteur d'itinéraires n'a pas répondu (${(err as Error).message}).` };
-  }
-}

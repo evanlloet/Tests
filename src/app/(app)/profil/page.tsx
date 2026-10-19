@@ -3,7 +3,7 @@ import { ExternalLink, LogOut } from "lucide-react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { ActionForm } from "@/components/action-form";
+import { ActionForm, SubmitButton } from "@/components/action-form";
 import { DeleteAccountForm } from "@/components/delete-account";
 import { AddTerritoryForm, FavoritePlaceForm, SettingsForm, TravelForm } from "@/components/profile-forms";
 import { Badge, SectorDot } from "@/components/ui/badge";
@@ -13,11 +13,12 @@ import { Card, CardBody, CardHeader, Tile } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { WeekTemplateEditor } from "@/components/week-template-editor";
 import { DEPARTMENTS } from "@/domain/departments";
+import { formatDateTime } from "@/domain/time";
 import { geocoderConfigured } from "@/integrations/geocoding/geoplateforme";
 import { routingStatus } from "@/integrations/routing";
 import { logoutAction } from "@/server/actions/auth";
 import { restartOnboardingAction } from "@/server/actions/onboarding";
-import { deleteFavoritePlaceAction, setGamificationAction, setThemeAction } from "@/server/actions/profile";
+import { deleteFavoritePlaceAction, setGamificationAction, setThemeAction, testRoutingAction } from "@/server/actions/profile";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db/client";
 import { favoritePlaces } from "@/server/db/schema";
@@ -89,8 +90,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           <nav className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4 text-sm lg:hidden" aria-label="Autres écrans">
             {[
               ...(user.gamificationEnabled ? [["/recompenses", "Récompenses"]] : []),
+              ["/statistiques", "Statistiques"],
               ["/tournees", "Tournées"],
               ["/imports", "Imports Outlook"],
+              ["/telephone", "RDV téléphoniques"],
               ["/rapprochements", `Rapprochements${pending ? ` (${pending})` : ""}`],
               ["/pilotage", "Pilotage"],
             ].map(([href, label]) => (
@@ -219,8 +222,19 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               <div>
                 <dt className="font-medium">Calcul d&apos;itinéraires</dt>
                 <dd className="text-muted">
-                  {routing.configured ? `${routing.label} — configuré (vérifié à chaque calcul ; repli sur estimation en cas d'échec).` : `${routing.label}. Configurez OSRM_URL pour des temps de trajet routiers.`}
+                  {routing.configured
+                    ? `${routing.label}. Trajets mis en cache ; repli automatique sur l'estimation à vol d'oiseau si le service ne répond pas.`
+                    : `${routing.label} (ROUTING_PROVIDER=estimate).`}
+                  {routing.lastSuccessAt ? ` Dernière réponse : ${formatDateTime(routing.lastSuccessAt, user.timezone)}.` : ""}
+                  {routing.lastError ? ` Dernier échec : ${routing.lastError}.` : ""}
                 </dd>
+                {routing.configured ? (
+                  <ActionForm action={testRoutingAction} className="mt-2">
+                    <SubmitButton size="sm" variant="secondary" pendingLabel="Test en cours…">
+                      Tester le calcul d&apos;itinéraire
+                    </SubmitButton>
+                  </ActionForm>
+                ) : null}
               </div>
               <div>
                 <dt className="font-medium">Géocodage</dt>

@@ -155,6 +155,7 @@ export async function listForMatching(db: DbOrTx, userId: string) {
       city: pharmacies.city,
       postalCode: pharmacies.postalCode,
       addressLine: pharmacies.addressLine,
+      legalName: pharmacies.legalName,
     })
     .from(pharmacies)
     .where(and(eq(pharmacies.userId, userId), sql`${pharmacies.status} <> 'closed'`));

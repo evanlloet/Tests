@@ -84,7 +84,7 @@ changements importants, données intactes après déconnexion / reconnexion.
 | Service | État | Détail |
 |---|---|---|
 | PostgreSQL | ✅ vérifié | Testé sur PostgreSQL 16 (tests d'intégration et parcours complet). Compatible Supabase. |
-| Calcul d'itinéraires (OSRM) | ⚠️ **codé, non vérifié** | Activé si `OSRM_URL` est renseigné. Sans moteur, Léa affiche une **estimation à vol d'oiseau clairement signalée** (jamais présentée comme un itinéraire). En cas d'échec d'OSRM, repli sur l'estimation avec un message. |
+| Calcul d'itinéraires routiers (IGN Géoplateforme par défaut, ou OSRM) | ⚠️ **codé, non vérifié** | Utilisé par les tournées (`ROUTING_PROVIDER`). Trajets mis en cache en base (`route_legs`), au plus 90 nouveaux trajets par calcul. Si le service ne répond pas : pause de 5 min et **estimation à vol d'oiseau clairement signalée**. Bouton « Tester le calcul d'itinéraire » dans le profil (trajet témoin Rennes → Caen). Les statistiques historiques restent en estimation. |
 | Géocodage Géoplateforme IGN | ⚠️ **codé, non vérifié** | Utilisé à la demande (bouton « Géolocaliser »). Un résultat peu sûr est ignoré : la fiche reste sans coordonnées. |
 | Fond de carte Plan IGN | ⚠️ **non vérifié** | MapLibre fonctionne (bonshommes, bulles, tournée, sélection) ; les tuiles IGN n'ont pas pu être chargées dans l'environnement de développement (réseau restreint). Sans elles, un fond simplifié livré avec l'application (contours des départements, `public/geo/departements-ouest.geojson`) reste affiché, avec un message. |
 | Microsoft Graph (Outlook) | ❌ non disponible | Import de fichiers ICS / CSV uniquement. L'architecture d'import est prête à recevoir une synchronisation. |
@@ -118,7 +118,9 @@ Sans inscription ouverte : `npm run user:create -- adresse@exemple.fr Prénom` (
 |---|---|
 | `DATABASE_URL` | Chaîne de connexion PostgreSQL (**obligatoire**). Supabase : pooler de session (5432) ou de transaction (6543, requêtes préparées désactivées automatiquement). |
 | `ALLOW_SIGNUP` | `true` pour autoriser l'inscription depuis l'écran ; `false` ensuite. |
-| `OSRM_URL` | Serveur OSRM pour des temps de trajet routiers (facultatif). |
+| `ROUTING_PROVIDER` | `ign` (défaut, Géoplateforme IGN sans clé), `osrm` ou `estimate` (aucun appel réseau). |
+| `IGN_ROUTING_URL` | Base du service d'itinéraire IGN (défaut `https://data.geopf.fr/navigation`). |
+| `OSRM_URL` | Serveur OSRM (utilisé si renseigné et `ROUTING_PROVIDER` vide ou `osrm`). |
 | `GEOCODER_URL` | Géocodeur (par défaut Géoplateforme IGN) ; vide pour désactiver. |
 | `NEXT_PUBLIC_MAP_RASTER_TILES`, `NEXT_PUBLIC_MAP_ATTRIBUTION` | Tuiles du fond de carte (seules variables exposées au navigateur). |
 
@@ -158,6 +160,22 @@ A/B/C/D et la date de prochaine visite du fichier, avec des congés, des réunio
 vrai Outlook. Les journées regroupent des clientes proches mais dans un ordre non optimisé, pour voir la simulation de
 tournée à l'œuvre. À importer dans un **compte de test** : les visites fictives se mélangeraient sinon à l'historique
 réel.
+
+### Après l'import de l'agenda : rendez-vous téléphoniques, hôtels, statistiques
+
+- **Rendez-vous téléphoniques** (écran « RDV téléphoniques », lien en fin d'import) : l'agenda ne les distingue pas.
+  Léa les déduit de chaque journée — pris pendant un créneau de télétravail (« VCA / TAD »), trajet impossible
+  entre deux rendez-vous, rendez-vous isolé à plus de 60 km des autres (sauf s'il est sur la route du départ ou du
+  retour), rendez-vous de 30 min éloigné — et les propose « à valider ». Un rendez-vous confirmé par téléphone sort
+  des trajets, des kilomètres et des tournées, mais reste un contact. Un choix validé n'est jamais modifié par une
+  détection ultérieure.
+- **Nuits d'hôtel** : lues dans les réservations « journée entière » de l'agenda (jour d'arrivée → jour de départ :
+  2 jours = 1 nuit). Elles servent de point de départ et d'arrivée des journées dans les statistiques et la détection.
+- **Statistiques** : secteur(s) réellement travaillé(s) chaque jour comparés à la semaine type, visites par mois,
+  nuits d'hôtel (par soir, hôtels habituels, kilomètres évités), couverture des clientes par catégorie et département,
+  clientes non vues depuis 6 mois, dernier mois jour par jour et 3 dernières semaines en détail.
+- Les titres de CRM « KC - Visite : <raison sociale> - <CP> <ville> » sont reconnus comme visites et rapprochés par
+  raison sociale + code postal ; « KC - Tâche : … » sont classés comme tâches.
 
 ### Format du CSV des pharmacies
 

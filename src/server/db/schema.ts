@@ -416,6 +416,12 @@ export const appointments = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }),
     source: text("source", { enum: ["manual", "calendar_import", "suggestion", "route_plan"] }).notNull(),
     calendarEventId: uuid("calendar_event_id").references(() => calendarEvents.id, { onDelete: "set null" }),
+    /** Sur place ou par téléphone : un rendez-vous téléphonique n'entre pas dans les trajets */
+    mode: text("mode", { enum: ["onsite", "phone"] }).notNull().default("onsite"),
+    /** none : rien à signaler ; pending : détecté comme téléphonique, à valider ; validated : choix confirmé */
+    modeReview: text("mode_review", { enum: ["none", "pending", "validated"] }).notNull().default("none"),
+    /** Raison de la détection (« 181 km de Liffré sans le temps de faire la route »…) */
+    modeReason: text("mode_reason"),
     notes: text("notes"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -430,6 +436,8 @@ export const appointments = pgTable(
     check("appointments_status_check", sql`${t.status} in ('proposed', 'pending', 'confirmed', 'cancelled')`),
     check("appointments_outcome_check", sql`${t.outcome} in ('unknown', 'done', 'missed')`),
     check("appointments_kind_check", sql`${t.kind} in ('visit', 'unavailable', 'other')`),
+    check("appointments_mode_check", sql`${t.mode} in ('onsite', 'phone')`),
+    check("appointments_mode_review_check", sql`${t.modeReview} in ('none', 'pending', 'validated')`),
   ],
 );
 
@@ -522,6 +530,24 @@ export const favoritePlaces = pgTable("favorite_places", {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/**
+ * Cache des trajets routiers calculés par le moteur d'itinéraires (IGN, OSRM) :
+ * évite de redemander les mêmes trajets. Coordonnées arrondies à ~10 m.
+ * Ce sont des données routières, pas des données personnelles.
+ */
+export const routeLegs = pgTable(
+  "route_legs",
+  {
+    provider: text("provider").notNull(),
+    fromKey: text("from_key").notNull(),
+    toKey: text("to_key").notNull(),
+    distanceKm: real("distance_km").notNull(),
+    durationMin: real("duration_min").notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.provider, t.fromKey, t.toKey] })],
+);
 
 export const notifications = pgTable(
   "notifications",
